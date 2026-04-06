@@ -1,24 +1,80 @@
-entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
-                { id: 2, asset: 'ETH', type: 'short', size: 2.5, entry: 3500, current: 3456.78, pnl: 108.05, pnlPercent: 1.23 }
-            ];
+            state.ws.onerror = () => {
+                document.getElementById('connectionStatus').textContent = 'Error';
+                document.getElementById('connectionStatus').className = 'text-[var(--danger)]';
+                document.getElementById('liveIndicator').style.background = 'var(--danger)';
+            };
+
+            state.ws.onclose = () => {
+                document.getElementById('connectionStatus').textContent = 'Reconnecting...';
+                document.getElementById('connectionStatus').className = 'text-[var(--warning)]';
+                // Attempt reconnect
+                setTimeout(() => connectWebSocket(state.currentSymbol, state.timeframe), 3000);
+            };
+
+            // Ticker WebSocket for 24h stats
+            state.tickerWs = new WebSocket(`${BINANCE_WS}/${tickerStream}`);
+            state.tickerWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateTickerUI(data);
+            };
         }
 
-        // Initialize trade history
-        function initTradeHistory() {
-            state.tradeHistory = [
-                { id: 1, time: '14:32:05', asset: 'BTC', type: 'buy', amount: 0.05, price: 67150, ai: true },
-                { id: 2, time: '14:28:12', asset: 'ETH', type: 'sell', amount: 1.2, price: 3480, ai: false },
-                { id: 3, time: '14:15:33', asset: 'BTC', type: 'buy', amount: 0.02, price: 66890, ai: true },
-                { id: 4, time: '13:58:21', asset: 'SOL', type: 'sell', amount: 5.5, price: 182, ai: false },
-                { id: 5, time: '13:42:10', asset: 'BTC', type: 'sell', amount: 0.03, price: 67200, ai: true },
-                { id: 6, time: '13:30:45', asset: 'ETH', type: 'buy', amount: 0.8, price: 3420, ai: false }
-            ];
+        function handleKlineUpdate(kline) {
+            const newCandle = {
+                openTime: kline.t,
+                open: parseFloat(kline.o),
+                high: parseFloat(kline.h),
+                low: parseFloat(kline.l),
+                close: parseFloat(kline.c),
+                volume: parseFloat(kline.v),
+                closeTime: kline.T
+            };
+
+            state.currentPrice = newCandle.close;
+
+            // Update or add candle
+            const lastCandle = state.candles[state.candles.length - 1];
+            if (lastCandle && lastCandle.openTime === newCandle.openTime) {
+                // Update existing candle
+                state.candles[state.candles.length - 1] = newCandle;
+            } else {
+                // Add new candle
+                state.candles.push(newCandle);
+                if (state.candles.length > 100) state.candles.shift();
+            }
+
+            drawChart();
+            updatePriceDisplay();
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        function updateTickerUI(data) {
+            const changePercent = parseFloat(data.P);
+            const priceChangeEl = document.getElementById('priceChange');
+            
+            priceChangeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
+            priceChangeEl.className = changePercent >= 0 ? 'text-[var(--success)] mono text-sm' : 'text-[var(--danger)] mono text-sm';
+
+            document.getElementById('high24h').textContent = '$' + parseFloat(data.h).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('low24h').textContent = '$' + parseFloat(data.l).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('volume24h').textContent = parseFloat(data.v).toLocaleString('en-US', { maximumFractionDigits: 0 });
+            document.getElementById('tradeCount').textContent = parseInt(data.n).toLocaleString();
+        }
+
+        function updatePriceDisplay() {
+            const price = state.currentPrice;
+            if (!price) return;
+
+            document.getElementById('currentPrice').textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('entryPrice').textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            // Update position sizes and PnL
+            updatePositionPnL();
         }
 
         // ==================== CHART DRAWING ====================
         const canvas = document.getElementById('chartCanvas');
         const ctx = canvas.getContext('2d');
-        let chartAnimationId = null;
 
         function resizeCanvas() {
             const container = canvas.parentElement;
@@ -34,11 +90,11 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
             const width = canvas.clientWidth;
             const height = canvas.clientHeight;
             
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, width, width);
 
             if (state.candles.length === 0) return;
 
-            const padding = { top: 20, right: 60, bottom: 30, left: 10 };
+            const padding = { top: 20, right: 70, bottom: 30, left: 10 };
             const chartWidth = width - padding.left - padding.right;
             const chartHeight = height - padding.top - padding.bottom;
 
@@ -54,7 +110,6 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
             ctx.strokeStyle = 'rgba(42, 53, 72, 0.5)';
             ctx.lineWidth = 1;
             
-            // Horizontal grid lines
             for (let i = 0; i <= 5; i++) {
                 const y = padding.top + (chartHeight / 5) * i;
                 ctx.beginPath();
@@ -62,7 +117,6 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                 ctx.lineTo(width - padding.right, y);
                 ctx.stroke();
 
-                // Price labels
                 const price = maxPrice - ((maxPrice - minPrice) / 5) * i;
                 ctx.fillStyle = '#64748b';
                 ctx.font = '11px JetBrains Mono';
@@ -85,7 +139,6 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
 
                 const isGreen = candle.close >= candle.open;
                 const color = isGreen ? '#22c55e' : '#ef4444';
-                const bgColor = isGreen ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)';
 
                 // Draw wick
                 ctx.strokeStyle = color;
@@ -99,125 +152,275 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                 const bodyHeight = Math.max(1, Math.abs(yClose - yOpen));
                 const bodyY = Math.min(yOpen, yClose);
 
-                ctx.fillStyle = isGreen ? color : color;
+                ctx.fillStyle = color;
                 ctx.fillRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight);
 
-                // Glow effect for recent candles
-                if (i > state.candles.length - 5) {
+                // Glow for recent candles
+                if (i > state.candles.length - 3) {
                     ctx.shadowColor = color;
-                    ctx.shadowBlur = 8;
+                    ctx.shadowBlur = 6;
                     ctx.fillRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight);
                     ctx.shadowBlur = 0;
                 }
             });
 
-            // Draw current price line
-            const currentPrice = state.candles[state.candles.length - 1].close;
-            const currentY = padding.top + ((maxPrice - currentPrice) / (maxPrice - minPrice)) * chartHeight;
-            
-            ctx.strokeStyle = '#00d4aa';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(padding.left, currentY);
-            ctx.lineTo(width - padding.right, currentY);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            // Current price line
+            if (state.currentPrice) {
+                const currentY = padding.top + ((maxPrice - state.currentPrice) / (maxPrice - minPrice)) * chartHeight;
+                
+                ctx.strokeStyle = '#00d4aa';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(padding.left, currentY);
+                ctx.lineTo(width - padding.right, currentY);
+                ctx.stroke();
+                ctx.setLineDash([]);
 
-            // Current price label
-            ctx.fillStyle = '#00d4aa';
-            ctx.fillRect(width - padding.right, currentY - 10, 55, 20);
-            ctx.fillStyle = '#0a0e17';
-            ctx.font = 'bold 10px JetBrains Mono';
-            ctx.textAlign = 'left';
-            ctx.fillText(formatPrice(currentPrice), width - padding.right + 4, currentY + 4);
+                ctx.fillStyle = '#00d4aa';
+                ctx.fillRect(width - padding.right, currentY - 10, 60, 20);
+                ctx.fillStyle = '#0a0e17';
+                ctx.font = 'bold 10px JetBrains Mono';
+                ctx.textAlign = 'left';
+                ctx.fillText(formatPrice(state.currentPrice), width - padding.right + 4, currentY + 4);
+            }
         }
 
         function formatPrice(price) {
-            if (price >= 1000) return (price / 1000).toFixed(2) + 'K';
-            return price.toFixed(2);
+            if (price >= 1000) return (price / 1000).toFixed(1) + 'K';
+            if (price >= 1) return price.toFixed(2);
+            return price.toFixed(4);
         }
 
-        // ==================== LIVE DATA SIMULATION ====================
-        function updateLiveData() {
-            if (state.candles.length === 0) return;
+        // ==================== AI AGENT LOGIC ====================
+        function runAIAnalysis() {
+            if (state.candles.length < 10) return;
 
-            const lastCandle = state.candles[state.candles.length - 1];
-            const volatility = lastCandle.close * 0.001;
-            const change = (Math.random() - 0.5) * volatility;
+            const recentCandles = state.candles.slice(-10);
+            const closes = recentCandles.map(c => c.close);
             
-            // Update last candle
-            lastCandle.close += change;
-            lastCandle.high = Math.max(lastCandle.high, lastCandle.close);
-            lastCandle.low = Math.min(lastCandle.low, lastCandle.close);
+            // Simple Moving Average calculation
+            const sma5 = closes.slice(-5).reduce((a, b) => a + b, 0) / 5;
+            const sma10 = closes.reduce((a, b) => a + b, 0) / 10;
+            const currentPrice = closes[closes.length - 1];
 
-            // Update current price display
-            const asset = assetData[state.currentAsset];
-            asset.price = lastCandle.close;
-            
-            // Occasionally create new candle
-            if (Math.random() > 0.95) {
-                const newOpen = lastCandle.close;
-                const newChange = (Math.random() - 0.5) * volatility * 2;
-                const newClose = newOpen + newChange;
-                const newHigh = Math.max(newOpen, newClose) + Math.random() * volatility;
-                const newLow = Math.min(newOpen, newClose) - Math.random() * volatility;
-                
-                state.candles.push({
-                    open: newOpen,
-                    high: newHigh,
-                    low: newLow,
-                    close: newClose,
-                    volume: Math.random() * 1000000
-                });
+            let signal = 'hold';
+            let confidence = 50;
+            let analysis = '';
 
-                if (state.candles.length > 100) {
-                    state.candles.shift();
-                }
+            // Trend detection
+            if (sma5 > sma10 && currentPrice > sma5) {
+                signal = 'buy';
+                confidence = 70 + Math.random() * 20;
+                analysis = `Bullish trend detected. SMA(5) ${formatPrice(sma5)} > SMA(10) ${formatPrice(sma10)}. Price momentum strong. Recommending LONG position.`;
+            } else if (sma5 < sma10 && currentPrice < sma5) {
+                signal = 'sell';
+                confidence = 70 + Math.random() * 20;
+                analysis = `Bearish trend detected. SMA(5) ${formatPrice(sma5)} < SMA(10) ${formatPrice(sma10)}. Downward pressure increasing. Recommending SHORT position.`;
+            } else {
+                confidence = 50 + Math.random() * 20;
+                analysis = `Market consolidating. SMA values converging. Waiting for clear breakout direction. Current risk/reward unfavorable.`;
             }
 
-            updateUI();
-            drawChart();
+            // Update UI
+            const signalEl = document.getElementById('aiSignal');
+            signalEl.className = `signal-badge signal-${signal}`;
+            signalEl.textContent = signal.toUpperCase();
+
+            document.getElementById('aiAnalysis').textContent = analysis;
+            document.getElementById('confidence').textContent = Math.round(confidence) + '%';
+
+            const riskEl = document.getElementById('riskLevel');
+            if (confidence >= 80) {
+                riskEl.textContent = 'LOW';
+                riskEl.className = 'text-2xl font-bold text-[var(--success)] mono';
+            } else if (confidence >= 60) {
+                riskEl.textContent = 'MED';
+                riskEl.className = 'text-2xl font-bold text-[var(--warning)] mono';
+            } else {
+                riskEl.textContent = 'HIGH';
+                riskEl.className = 'text-2xl font-bold text-[var(--danger)] mono';
+            }
+
+            return { signal, confidence };
         }
 
-        // ==================== UI RENDERING ====================
-        function updateUI() {
-            const asset = assetData[state.currentAsset];
+        function executeAITrade() {
+            if (state.aiRunning || !state.currentPrice) return;
             
-            // Update price displays
-            document.getElementById('currentPrice').textContent = '$' + asset.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('high24h').textContent = '$' + asset.high.toLocaleString();
-            document.getElementById('low24h').textContent = '$' + asset.low.toLocaleString();
-            document.getElementById('volume24h').textContent = '$' + asset.volume;
-            document.getElementById('marketCap').textContent = '$' + asset.cap;
-            document.getElementById('entryPrice').textContent = '$' + asset.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            
-            // Update change
-            const changeEl = document.getElementById('priceChange');
-            changeEl.textContent = (asset.change >= 0 ? '+' : '') + asset.change.toFixed(2) + '%';
-            changeEl.className = asset.change >= 0 ? 'text-[var(--success)] mono text-sm' : 'text-[var(--danger)] mono text-sm';
+            state.aiRunning = true;
+            const btn = document.getElementById('aiExecuteBtn');
+            btn.innerHTML = `
+                <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+                </svg>
+                Analyzing...
+            `;
 
-            // Update position size
+            setTimeout(() => {
+                const result = runAIAnalysis();
+                
+                if (result && result.signal !== 'hold') {
+                    const tradeAmount = (Math.random() * 0.05 + 0.01).toFixed(4);
+                    
+                    const newTrade = {
+                        id: Date.now(),
+                        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                        asset: state.currentAsset,
+                        type: result.signal,
+                        amount: parseFloat(tradeAmount),
+                        price: state.currentPrice,
+                        ai: true
+                    };
+                    
+                    state.tradeHistory.unshift(newTrade);
+                    renderTradeHistory();
+
+                    if (result.signal === 'buy') {
+                        const newPosition = {
+                            id: Date.now(),
+                            asset: state.currentAsset,
+                            type: 'long',
+                            size: parseFloat(tradeAmount),
+                            entry: state.currentPrice,
+                            current: state.currentPrice,
+                            pnl: 0,
+                            pnlPercent: 0
+                        };
+                        state.positions.push(newPosition);
+                        renderPositions();
+                    }
+
+                    showToast(
+                        'AI Trade Executed',
+                        `${result.signal.toUpperCase()} ${tradeAmount} ${state.currentAsset} @ $${state.currentPrice.toLocaleString()}`,
+                        result.signal === 'buy' ? 'success' : 'danger'
+                    );
+                } else {
+                    showToast('AI Decision', 'Holding position - market conditions unclear', 'warning');
+                }
+
+                btn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Execute AI Trade
+                `;
+                state.aiRunning = false;
+            }, 1500);
+        }
+
+        // ==================== TRADING FUNCTIONS ====================
+        function submitTrade() {
+            const amount = parseFloat(document.getElementById('tradeAmount').value) || 0;
+            if (amount <= 0 || !state.currentPrice) {
+                showToast('Invalid Amount', 'Please enter a valid trade amount', 'error');
+                return;
+            }
+
+            const tradeSize = amount / state.currentPrice;
+
+            const newTrade = {
+                id: Date.now(),
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                asset: state.currentAsset,
+                type: state.tradeType,
+                amount: parseFloat(tradeSize.toFixed(6)),
+                price: state.currentPrice,
+                ai: false
+            };
+
+            state.tradeHistory.unshift(newTrade);
+            renderTradeHistory();
+
+            if (state.tradeType === 'buy') {
+                const newPosition = {
+                    id: Date.now(),
+                    asset: state.currentAsset,
+                    type: 'long',
+                    size                    size: parseFloat(tradeSize.toFixed(6)),
+                    entry: state.currentPrice,
+                    current: state.currentPrice,
+                    pnl: 0,
+                    pnlPercent: 0
+                };
+                state.positions.push(newPosition);
+                renderPositions();
+            }
+
+            showToast(
+                'Order Placed',
+                `${state.tradeType.toUpperCase()} ${tradeSize.toFixed(6)} ${state.currentAsset} @ $${state.currentPrice.toLocaleString()}`,
+                state.tradeType === 'buy' ? 'success' : 'danger'
+            );
+        }
+
+        function updatePositionPnL() {
+            if (!state.currentPrice) return;
+
+            state.positions.forEach(pos => {
+                if (pos.asset === state.currentAsset) {
+                    pos.current = state.currentPrice;
+                    const diff = pos.current - pos.entry;
+                    pos.pnl = diff * pos.size;
+                    pos.pnlPercent = (diff / pos.entry) * 100;
+                }
+            });
+            renderPositions();
+        }
+
+        function closePosition(id) {
+            const posIndex = state.positions.findIndex(p => p.id === id);
+            if (posIndex === -1) return;
+
+            const pos = state.positions[posIndex];
+            
+            // Add closing trade to history
+            const closeTrade = {
+                id: Date.now(),
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                asset: pos.asset,
+                type: 'sell',
+                amount: pos.size,
+                price: state.currentPrice,
+                ai: false
+            };
+            state.tradeHistory.unshift(closeTrade);
+
+            // Remove position
+            state.positions.splice(posIndex, 1);
+            
+            renderPositions();
+            renderTradeHistory();
+
+            showToast('Position Closed', `Realized PnL: ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}`, pos.pnl >= 0 ? 'success' : 'danger');
+        }
+
+        function setMaxAmount() {
+            document.getElementById('tradeAmount').value = 10000;
+            state.amount = 10000;
+            updateTradeCalculations();
+        }
+
+        function updateTradeCalculations() {
             const posSize = state.amount * state.leverage;
             document.getElementById('positionSize').textContent = '$' + posSize.toLocaleString();
             
-            // Calculate liquidation price
-            const liqPrice = state.tradeType === 'buy' 
-                ? asset.price * (1 - 0.9 / state.leverage)
-                : asset.price * (1 + 0.9 / state.leverage);
-            document.getElementById('liqPrice').textContent = '$' + liqPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            // Update last update time
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-
-            // Update asset name
-            document.getElementById('assetName').textContent = state.currentAsset + '/USDT';
+            if (state.currentPrice) {
+                const liqPrice = state.tradeType === 'buy' 
+                    ? state.currentPrice * (1 - 0.9 / state.leverage)
+                    : state.currentPrice * (1 + 0.9 / state.leverage);
+                document.getElementById('liqPrice').textContent = '$' + liqPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
         }
 
+        // ==================== UI RENDERING ====================
         function renderPositions() {
             const container = document.getElementById('positionsList');
             if (state.positions.length === 0) {
                 container.innerHTML = '<div class="p-4 text-center text-[var(--text-muted)] text-sm">No open positions</div>';
+                document.getElementById('positionCount').textContent = '0 active';
                 return;
             }
 
@@ -238,7 +441,7 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                         </button>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span class="text-[var(--text-muted)]">Size: ${pos.size}</span>
+                        <span class="text-[var(--text-muted)]">Size: ${pos.size.toFixed(4)}</span>
                         <span class="mono ${pos.pnl >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}">
                             ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}
                         </span>
@@ -257,210 +460,31 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
 
         function renderTradeHistory() {
             const container = document.getElementById('tradeHistoryList');
+            if (state.tradeHistory.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-[var(--text-muted)] text-sm">No trade history</div>';
+                document.getElementById('totalTrades').textContent = '0 trades';
+                return;
+            }
+
             container.innerHTML = state.tradeHistory.map(trade => `
-                <div class="trade-item animate-slide-in">
+                <div class="trade-item">
                     <div class="flex items-center justify-between mb-1">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-semibold px-2 py-0.5 rounded ${trade.type === 'buy' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
                                 ${trade.type.toUpperCase()}
                             </span>
                             <span class="font-medium text-sm">${trade.asset}</span>
-                            ${trade.ai ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent]/20 text-[var(--accent)]">AI</span>' : ''}
+                            ${trade.ai ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">AI</span>' : ''}
                         </div>
                         <span class="text-xs text-[var(--text-muted)] mono">${trade.time}</span>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span class="text-[var(--text-muted)]">${trade.amount} @ $${trade.price.toLocaleString()}</span>
+                        <span class="text-[var(--text-muted)]">${trade.amount.toFixed(4)} @ $${trade.price.toLocaleString()}</span>
                     </div>
                 </div>
             `).join('');
 
             document.getElementById('totalTrades').textContent = state.tradeHistory.length + ' trades';
-        }
-
-        // ==================== AI AGENT SIMULATION ====================
-        function runAIAnalysis() {
-            const signal = aiSignals[Math.floor(Math.random() * aiSignals.length)];
-            
-            // Update signal badge
-            const signalEl = document.getElementById('aiSignal');
-            signalEl.className = `signal-badge signal-${signal.type}`;
-            signalEl.innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="12" r="8"/>
-                </svg>
-                ${signal.type.toUpperCase()}
-            `;
-
-            // Update analysis
-            document.getElementById('aiAnalysis').textContent = signal.analysis;
-            document.getElementById('confidence').textContent = signal.confidence + '%';
-
-            // Update risk level based on confidence
-            const riskEl = document.getElementById('riskLevel');
-            if (signal.confidence >= 80) {
-                riskEl.textContent = 'LOW';
-                riskEl.className = 'text-2xl font-bold text-[var(--success)] mono';
-            } else if (signal.confidence >= 60) {
-                riskEl.textContent = 'MED';
-                riskEl.className = 'text-2xl font-bold text-[var(--warning)] mono';
-            } else {
-                riskEl.textContent = 'HIGH';
-                riskEl.className = 'text-2xl font-bold text-[var(--danger)] mono';
-            }
-
-            return signal;
-        }
-
-        function executeAITrade() {
-            if (state.aiRunning) return;
-            
-            state.aiRunning = true;
-            const btn = document.getElementById('aiExecuteBtn');
-            btn.innerHTML = `
-                <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
-                    <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
-                </svg>
-                Analyzing...
-            `;
-
-            // Simulate AI analysis delay
-            setTimeout(() => {
-                const signal = runAIAnalysis();
-                
-                // Execute trade based on signal
-                if (signal.type !== 'hold') {
-                    const asset = assetData[state.currentAsset];
-                    const tradeAmount = (Math.random() * 0.1 + 0.01).toFixed(4);
-                    
-                    // Add to trade history
-                    const newTrade = {
-                        id: Date.now(),
-                        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-                        asset: state.currentAsset,
-                        type: signal.type === 'buy' ? 'buy' : 'sell',
-                        amount: parseFloat(tradeAmount),
-                        price: asset.price,
-                        ai: true
-                    };
-                    
-                    state.tradeHistory.unshift(newTrade);
-                    renderTradeHistory();
-
-                    // Add position if buy
-                    if (signal.type === 'buy') {
-                        const newPosition = {
-                            id: Date.now(),
-                            asset: state.currentAsset,
-                            type: 'long',
-                            size: parseFloat(tradeAmount),
-                            entry: asset.price,
-                            current: asset.price,
-                            pnl: 0,
-                            pnlPercent: 0
-                        };
-                        state.positions.push(newPosition);
-                        renderPositions();
-                    }
-
-                    showToast(
-                        signal.type === 'buy' ? 'Trade Executed' : 'Position Closed',
-                        `${signal.type.toUpperCase()} ${tradeAmount} ${state.currentAsset} @ $${asset.price.toLocaleString()}`,
-                        signal.type === 'buy' ? 'success' : 'danger'
-                    );
-                } else {
-                    showToast('AI Decision', 'Holding position - waiting for better entry', 'warning');
-                }
-
-                btn.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                    Execute AI Trade
-                `;
-                state.aiRunning = false;
-            }, 2000);
-        }
-
-        // ==================== TRADE ACTIONS ====================
-        function submitTrade() {
-            const amount = parseFloat(document.getElementById('tradeAmount').value) || 0;
-            if (amount <= 0) {
-                showToast('Invalid Amount', 'Please enter a valid trade amount', 'error');
-                return;
-            }
-
-            const asset = assetData[state.currentAsset];
-            const tradeSize = amount / asset.price;
-
-            const newTrade = {
-                id: Date.now(),
-                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-                asset: state.currentAsset,
-                type: state.tradeType,
-                amount: parseFloat(tradeSize.toFixed(6)),
-                price: asset.price,
-                ai: false
-            };
-
-            state.tradeHistory.unshift(newTrade);
-            renderTradeHistory();
-
-            // Add position for buy
-            if (state.tradeType === 'buy') {
-                const newPosition = {
-                    id: Date.now(),
-                    asset: state.currentAsset,
-                    type: 'long',
-                    size: parseFloat(tradeSize.toFixed(6)),
-                    entry: asset.price,
-                    current: asset.price,
-                    pnl: 0,
-                    pnlPercent: 0
-                };
-                state.positions.push(newPosition);
-                renderPositions();
-            }
-
-            showToast(
-                'Order Placed',
-                `${state.tradeType.toUpperCase()} ${tradeSize.toFixed(6)} ${state.currentAsset} @ $${asset.price.toLocaleString()}`,
-                state.tradeType === 'buy' ? 'success' : 'danger'
-            );
-        }
-
-        function closePosition(id) {
-            const posIndex = state.positions.findIndex(p => p.id === id);
-            if (posIndex === -1) return;
-
-            const pos = state.positions[posIndex];
-            const asset = assetData[pos.asset];
-
-            // Add closing trade to history
-            const closeTrade = {
-                id: Date.now(),
-                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-                asset: pos.asset,
-                type: 'sell',
-                amount: pos.size,
-                price: asset.price,
-                ai: false
-            };
-            state.tradeHistory.unshift(closeTrade);
-
-            // Remove position
-            state.positions.splice(posIndex, 1);
-            renderPositions();
-            renderTradeHistory();
-
-            showToast('Position Closed', `Realized PnL: ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}`, pos.pnl >= 0 ? 'success' : 'danger');
-        }
-
-        function setMaxAmount() {
-            document.getElementById('tradeAmount').value = 10000;
-            state.amount = 10000;
-            updateUI();
         }
 
         // ==================== TOAST NOTIFICATION ====================
@@ -516,11 +540,17 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.asset-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    
+                    state.currentSymbol = btn.dataset.symbol;
                     state.currentAsset = btn.dataset.asset;
-                    initCandles();
-                    updateUI();
-                    drawChart();
-                    runAIAnalysis();
+                    
+                    document.getElementById('assetName').textContent = btn.dataset.asset + '/USDT';
+                    document.getElementById('submitTradeBtn').textContent = (state.tradeType === 'buy' ? 'Buy ' : 'Sell ') + btn.dataset.asset;
+
+                    // Reconnect WebSocket and fetch new data
+                    fetchKlines(state.currentSymbol, state.timeframe);
+                    fetch24hrTicker(state.currentSymbol);
+                    connectWebSocket(state.currentSymbol, state.timeframe);
                 });
             });
 
@@ -529,9 +559,10 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    
                     state.timeframe = btn.dataset.tf;
-                    initCandles();
-                    drawChart();
+                    fetchKlines(state.currentSymbol, state.timeframe);
+                    connectWebSocket(state.currentSymbol, state.timeframe);
                 });
             });
 
@@ -541,6 +572,7 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                     document.querySelectorAll('.trade-type-btn').forEach(b => {
                         b.classList.remove('active-buy', 'active-sell');
                     });
+                    
                     state.tradeType = btn.dataset.type;
                     btn.classList.add(state.tradeType === 'buy' ? 'active-buy' : 'active-sell');
                     
@@ -556,14 +588,14 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                     document.querySelectorAll('.leverage-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     state.leverage = parseInt(btn.dataset.lev);
-                    updateUI();
+                    updateTradeCalculations();
                 });
             });
 
             // Amount input
             document.getElementById('tradeAmount').addEventListener('input', (e) => {
                 state.amount = parseFloat(e.target.value) || 0;
-                updateUI();
+                updateTradeCalculations();
             });
 
             // Submit trade
@@ -582,53 +614,35 @@ entry: 67000, current: 67432.50, pnl: 216.25, pnlPercent: 0.64 },
                 resizeCanvas();
                 drawChart();
             });
-
-            // Mobile menu
-            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-            if (mobileMenuBtn) {
-                mobileMenuBtn.addEventListener('click', () => {
-                    document.querySelector('.sidebar')?.classList.toggle('open');
-                    document.getElementById('sidebarOverlay')?.classList.toggle('open');
-                });
-            }
-
-            // Sidebar overlay click
-            document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
-                document.querySelector('.sidebar')?.classList.remove('open');
-                document.getElementById('sidebarOverlay')?.classList.remove('open');
-            });
         }
 
         // ==================== INITIALIZATION ====================
-        function init() {
-            // Initialize data
-            initCandles();
-            initPositions();
-            initTradeHistory();
-
+        async function init() {
             // Setup canvas
             resizeCanvas();
-            drawChart();
-
-            // Initial UI update
-            updateUI();
+            
+            // Initial UI setup
             renderPositions();
             renderTradeHistory();
-            runAIAnalysis();
-
-            // Setup event listeners
             setupEventListeners();
 
-            // Start live updates
-            setInterval(updateLiveData, 1000);
+            // Fetch initial data
+            await fetchKlines(state.currentSymbol, state.timeframe);
+            await fetch24hrTicker(state.currentSymbol);
+
+            // Connect WebSocket
+            connectWebSocket(state.currentSymbol, state.timeframe);
+
+            // Run initial AI analysis
+            setTimeout(runAIAnalysis, 2000);
             
             // Periodic AI analysis
             setInterval(runAIAnalysis, 30000);
 
-            console.log('Openclaw AI Trading Terminal initialized');
+            console.log('Openclaw AI Trading Terminal initialized with Live Data');
         }
 
-        // Start when DOM is ready
+        // Start
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
