@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Openclaw AI Trading Terminal</title>
+    <title>Openclaw AI Trading Terminal (Live)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,11 +25,7 @@
             --success: #22c55e;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Space Grotesk', sans-serif;
@@ -39,18 +35,14 @@
             overflow-x: hidden;
         }
 
-        .mono {
-            font-family: 'JetBrains Mono', monospace;
-        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
 
-        /* Background Pattern */
         .bg-pattern {
             position: fixed;
             inset: 0;
             background-image: 
                 radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 212, 170, 0.08), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0, 150, 255, 0.05), transparent),
-                linear-gradient(180deg, transparent 0%, var(--bg-primary) 100%);
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0, 150, 255, 0.05), transparent);
             pointer-events: none;
             z-index: 0;
         }
@@ -67,7 +59,6 @@
             opacity: 0.4;
         }
 
-        /* Card Styles */
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -75,11 +66,6 @@
             backdrop-filter: blur(10px);
         }
 
-        .card-glow {
-            box-shadow: 0 0 40px rgba(0, 212, 170, 0.05);
-        }
-
-        /* Button Styles */
         .btn-primary {
             background: linear-gradient(135deg, var(--accent), #00b894);
             color: var(--bg-primary);
@@ -89,26 +75,11 @@
             border: none;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 30px var(--accent-glow);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            box-shadow: 0 8px 30px var(--danger-glow);
         }
 
         .btn-outline {
@@ -133,7 +104,6 @@
             background: rgba(0, 212, 170, 0.1);
         }
 
-        /* Input Styles */
         .input-field {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
@@ -152,74 +122,24 @@
             box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
-        /* Chart Canvas */
-        #chartCanvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        #chartCanvas { width: 100%; height: 100%; display: block; }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
-        }
-
-        /* Animations */
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .animate-fade-in {
-            animation: fadeInUp 0.6s ease forwards;
-        }
-
-        .animate-slide-in {
-            animation: slideIn 0.4s ease forwards;
-        }
-
+        .animate-fade-in { animation: fadeInUp 0.6s ease forwards; }
         .stagger-1 { animation-delay: 0.1s; opacity: 0; }
         .stagger-2 { animation-delay: 0.2s; opacity: 0; }
         .stagger-3 { animation-delay: 0.3s; opacity: 0; }
-        .stagger-4 { animation-delay: 0.4s; opacity: 0; }
 
-        /* Live indicator */
         .live-dot {
             width: 8px;
             height: 8px;
@@ -228,7 +148,6 @@
             animation: pulse 2s infinite;
         }
 
-        /* AI Signal Badge */
         .signal-badge {
             display: inline-flex;
             align-items: center;
@@ -239,40 +158,14 @@
             font-weight: 600;
         }
 
-        .signal-buy {
-            background: rgba(34, 197, 94, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
+        .signal-buy { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .signal-sell { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .signal-hold { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-        .signal-sell {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
+        .trade-item { padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.2s ease; }
+        .trade-item:hover { background: rgba(255, 255, 255, 0.02); }
+        .trade-item:last-child { border-bottom: none; }
 
-        .signal-hold {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
-        /* Trade History Item */
-        .trade-item {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            transition: background 0.2s ease;
-        }
-
-        .trade-item:hover {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .trade-item:last-child {
-            border-bottom: none;
-        }
-
-        /* Asset Selector */
         .asset-btn {
             display: flex;
             align-items: center;
@@ -285,69 +178,17 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
+        .asset-btn:hover { background: rgba(255, 255, 255, 0.05); }
+        .asset-btn.active { background: rgba(0, 212, 170, 0.1); border-color: var(--accent); color: var(--accent); }
 
-        .asset-btn:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
+        .status-online { color: var(--success); }
+        .status-connecting { color: var(--warning); }
 
-        .asset-btn.active {
-            background: rgba(0, 212, 170, 0.1);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        /* Status Bar */
-        .status-online {
-            color: var(--success);
-        }
-
-        /* Tooltip */
-        .tooltip {
-            position: absolute;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 100;
-            white-space: nowrap;
-        }
-
-        /* Reduced Motion */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .sidebar {
-                position: fixed;
-                right: -320px;
-                top: 0;
-                bottom: 0;
-                z-index: 50;
-                transition: right 0.3s ease;
-            }
-
-            .sidebar.open {
-                right: 0;
-            }
-
-            .sidebar-overlay {
-                display: none;
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 40;
-            }
-
-            .sidebar-overlay.open {
-                display: block;
             }
         }
     </style>
@@ -361,13 +202,10 @@
         <header class="border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-xl sticky top-0 z-30">
             <div class="max-w-[1800px] mx-auto px-4 lg:px-6 py-4">
                 <div class="flex items-center justify-between">
-                    <!-- Logo -->
                     <div class="flex items-center gap-3 animate-fade-in">
                         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-emerald-600 flex items-center justify-center">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-[var(--bg-primary)]">
-                                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                                <path d="M2 17l10 5 10-5"/>
-                                <path d="M2 12l10 5 10-5"/>
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
                             </svg>
                         </div>
                         <div>
@@ -376,43 +214,17 @@
                         </div>
                     </div>
 
-                    <!-- Center - Asset Selector -->
                     <div class="hidden md:flex items-center gap-2 bg-[var(--bg-secondary)] rounded-xl p-1.5 animate-fade-in stagger-1">
-                        <button class="asset-btn active" data-asset="BTC">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-orange-500">
-                                <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1.5 14.5h-1v1.5h-1v-1.5h-1v1.5h-1v-1.5H8v-1h.5c.28 0 .5-.22.5-.5v-5c0-.28-.22-.5-.5-.5H8v-1h1.5V6.5h1V8h1V6.5h1V8h1c.83 0 1.5.67 1.5 1.5v1c0 .65-.42 1.21-1 1.41.87.21 1.5.99 1.5 1.91v1.68c0 .28.22.5.5.5h.5v1h-1.5z"/>
-                            </svg>
-                            <span class="font-medium">BTC</span>
-                        </button>
-                        <button class="asset-btn" data-asset="ETH">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-blue-400">
-                                <path d="M12 1.5l-7 11.2L12 16l7-3.3L12 1.5zm0 15.9l-7-4.1L12 22.5l7-9.2-7 4.1z"/>
-                            </svg>
-                            <span class="font-medium">ETH</span>
-                        </button>
-                        <button class="asset-btn" data-asset="SOL">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-purple-500">
-                                <path d="M4 17.5l3.5-3.5H20l-3.5 3.5H4zm0-11l3.5 3.5H20L16.5 6.5H4zM20 12l-3.5 3.5H4L7.5 12H20z"/>
-                            </svg>
-                            <span class="font-medium">SOL</span>
-                        </button>
+                        <button class="asset-btn active" data-symbol="BTCUSDT" data-asset="BTC">BTC</button>
+                        <button class="asset-btn" data-symbol="ETHUSDT" data-asset="ETH">ETH</button>
+                        <button class="asset-btn" data-symbol="SOLUSDT" data-asset="SOL">SOL</button>
                     </div>
 
-                    <!-- Right - Status & Actions -->
                     <div class="flex items-center gap-4 animate-fade-in stagger-2">
                         <div class="hidden sm:flex items-center gap-2 text-sm">
-                            <div class="live-dot"></div>
-                            <span class="text-[var(--text-secondary)]">Live</span>
+                            <div class="live-dot" id="liveIndicator"></div>
+                            <span class="text-[var(--text-secondary)]" id="connectionStatus">Connecting...</span>
                         </div>
-                        <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)]">
-                            <span class="text-[var(--text-muted)] text-sm">Agent:</span>
-                            <span class="status-online text-sm font-medium">Online</span>
-                        </div>
-                        <button id="mobileMenuBtn" class="lg:hidden p-2 rounded-lg bg-[var(--bg-secondary)]">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12h18M3 6h18M3 18h18"/>
-                            </svg>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -424,53 +236,41 @@
                 <!-- Left - Chart & Stats -->
                 <div class="flex-1 space-y-6">
                     <!-- Price Header -->
-                    <div class="card card-glow p-6 animate-fade-in stagger-1">
+                    <div class="card p-6 animate-fade-in stagger-1">
                         <div class="flex flex-wrap items-start justify-between gap-4">
                             <div>
-                                <div class="flex items                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                            <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1.5 14.5h-1v1.5h-1v-1.5h-1v1.5h-1v-1.5H8v-1h.5c.28 0 .5-.22.5-.5v-5c0-.28-.22-.5-.5-.5H8v-1h1.5V6.5h1V8h1V6.5h1V8h1c.83 0 1.5.67 1.5 1.5v1c0 .65-.42 1.21-1 1.41.87.21 1.5.99 1.5 1.91v1.68c0 .28.22.5.5.5h.5v1h-1.5z"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h2 class="text-2xl font-bold" id="assetName">BTC/USDT</h2>
-                                        <p class="text-[var(--text-muted)] text-sm">Bitcoin</p>
-                                    </div>
-                                </div>
+                                <h2 class="text-2xl font-bold" id="assetName">BTC/USDT</h2>
+                                <p class="text-[var(--text-muted)] text-sm">Real-time Binance Data</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-3xl font-bold mono" id="currentPrice">$67,432.50</p>
+                                <p class="text-3xl font-bold mono" id="currentPrice">Loading...</p>
                                 <div class="flex items-center justify-end gap-2 mt-1">
-                                    <span class="text-[var(--success)] mono text-sm" id="priceChange">+2.34%</span>
+                                    <span class="mono text-sm" id="priceChange">--</span>
                                     <span class="text-[var(--text-muted)] text-sm">24h</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Stats Row -->
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[var(--border)]">
                             <div>
                                 <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">24h High</p>
-                                <p class="text-lg font-semibold mono mt-1" id="high24h">$68,150.00</p>
+                                <p class="text-lg font-semibold mono mt-1" id="high24h">--</p>
                             </div>
                             <div>
                                 <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">24h Low</p>
-                                <p class="text-lg font-semibold mono mt-1" id="low24h">$65,820.00</p>
-                            </div>
+                                <p class="text-lg font-semibold mono mt-1" id="low24h">--                            </div>
                             <div>
                                 <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">24h Volume</p>
-                                <p class="text-lg font-semibold mono mt-1" id="volume24h">$2.4B</p>
+                                <p class="text-lg font-semibold mono mt-1" id="volume24h">--</p>
                             </div>
                             <div>
-                                <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">Market Cap</p>
-                                <p class="text-lg font-semibold mono mt-1" id="marketCap">$1.32T</p>
+                                <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">Trades (24h)</p>
+                                <p class="text-lg font-semibold mono mt-1" id="tradeCount">--</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Chart Section -->
-                    <div class="card card-glow animate-fade-in stagger-2">
+                    <div class="card animate-fade-in stagger-2">
                         <div class="flex items-center justify-between p-4 border-b border-[var(--border)]">
                             <div class="flex items-center gap-2">
                                 <span class="text-[var(--text-secondary)] text-sm">Timeframe:</span>
@@ -493,15 +293,14 @@
                     </div>
 
                     <!-- AI Agent Panel -->
-                    <div class="card card-glow animate-fade-in stagger-3">
+                    <div class="card animate-fade-in stagger-3">
                         <div class="p-4 border-b border-[var(--border)]">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-teal-600 flex items-center justify-center">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--bg-primary)]">
                                             <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-                                            <circle cx="8" cy="14" r="1"/>
-                                            <circle cx="16" cy="14" r="1"/>
+                                            <circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>
                                         </svg>
                                     </div>
                                     <div>
@@ -509,30 +308,19 @@
                                         <p class="text-xs text-[var(--text-muted)]">Autonomous Trading Intelligence</p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="signal-badge signal-hold" id="aiSignal">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                            <circle cx="12" cy="12" r="8"/>
-                                        </svg>
-                                        ANALYZING
-                                    </span>
-                                </div>
+                                <span class="signal-badge signal-hold" id="aiSignal">ANALYZING</span>
                             </div>
                         </div>
                         
                         <div class="p-4">
-                            <!-- AI Analysis -->
                             <div class="bg-[var(--bg-secondary)] rounded-xl p-4 mb-4">
                                 <p class="text-sm text-[var(--text-secondary)] mb-2">AI Analysis</p>
-                                <p class="text-sm leading-relaxed" id="aiAnalysis">
-                                    Scanning market conditions and analyzing price patterns...
-                                </p>
+                                <p class="text-sm leading-relaxed" id="aiAnalysis">Connecting to market data stream...</p>
                             </div>
 
-                            <!-- AI Metrics -->
                             <div class="grid grid-cols-3 gap-4 mb-4">
                                 <div class="text-center p-3 bg-[var(--bg-secondary)] rounded-xl">
-                                    <p class="text-2xl font-bold text-[var(--accent)] mono" id="confidence">87%</p>
+                                    <p class="text-2xl font-bold text-[var(--accent)] mono" id="confidence">--%</p>
                                     <p class="text-xs text-[var(--text-muted)] mt-1">Confidence</p>
                                 </div>
                                 <div class="text-center p-3 bg-[var(--bg-secondary)] rounded-xl">
@@ -545,7 +333,6 @@
                                 </div>
                             </div>
 
-                            <!-- AI Actions -->
                             <div class="flex gap-3">
                                 <button class="btn-primary flex-1 flex items-center justify-center gap-2" id="aiExecuteBtn">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -566,22 +353,16 @@
                 <!-- Right - Trading Panel -->
                 <div class="w-full lg:w-80 space-y-6">
                     <!-- Manual Trade -->
-                    <div class="card card-glow animate-fade-in stagger-2">
+                    <div class="card animate-fade-in stagger-2">
                         <div class="p-4 border-b border-[var(--border)]">
                             <h3 class="font-semibold">Manual Trade</h3>
                         </div>
                         <div class="p-4 space-y-4">
-                            <!-- Trade Type Toggle -->
                             <div class="flex gap-2">
-                                <button class="flex-1 py-3 rounded-xl font-semibold transition-all trade-type-btn active-buy" data-type="buy">
-                                    Buy
-                                </button>
-                                <button class="flex-1 py-3 rounded-xl font-semibold transition-all trade-type-btn" data-type="sell">
-                                    Sell
-                                </button>
+                                <button class="flex-1 py-3 rounded-xl font-semibold transition-all trade-type-btn active-buy" data-type="buy">Buy</button>
+                                <button class="flex-1 py-3 rounded-xl font-semibold transition-all trade-type-btn" data-type="sell">Sell</button>
                             </div>
 
-                            <!-- Amount Input -->
                             <div>
                                 <label class="text-xs text-[var(--text-muted)] uppercase tracking-wider">Amount (USDT)</label>
                                 <div class="relative mt-2">
@@ -590,7 +371,6 @@
                                 </div>
                             </div>
 
-                            <!-- Leverage -->
                             <div>
                                 <label class="text-xs text-[var(--text-muted)] uppercase tracking-wider">Leverage</label>
                                 <div class="flex gap-2 mt-2">
@@ -601,11 +381,10 @@
                                 </div>
                             </div>
 
-                            <!-- Order Summary -->
                             <div class="bg-[var(--bg-secondary)] rounded-xl p-4 space-y-2">
                                 <div class="flex justify-between text-sm">
                                     <span class="text-[var(--text-muted)]">Entry Price</span>
-                                    <span class="mono" id="entryPrice">$67,432.50</span>
+                                    <span class="mono" id="entryPrice">--</span>
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-[var(--text-muted)]">Position Size</span>
@@ -613,53 +392,45 @@
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-[var(--text-muted)]">Est. Liq. Price</span>
-                                    <span class="mono text-[var(--danger)]" id="liqPrice">$54,321.00</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-[var(--text-muted)]">Fee</span>
-                                    <span class="mono" id="tradeFee">$0.35</span>
+                                    <span class="mono text-[var(--danger)]" id="liqPrice">--</span>
                                 </div>
                             </div>
 
-                            <!-- Submit Button -->
-                            <button class="w-full py-4 rounded-xl font-semibold text-lg transition-all" id="submitTradeBtn">
+                            <button class="w-full py-4 rounded-xl font-semibold text-lg transition-all bg-gradient-to-r from-green-500 to-emerald-600 text-white" id="submitTradeBtn">
                                 Buy BTC
                             </button>
                         </div>
                     </div>
 
                     <!-- Positions -->
-                    <div class="card card-glow animate-fade-in stagger-3">
+                    <div class="card animate-fade-in stagger-3">
                         <div class="p-4 border-b border-[var(--border)]">
                             <div class="flex items-center justify-between">
                                 <h3 class="font-semibold">Open Positions</h3>
-                                <span class="text-xs text-[var(--text-muted)]" id="positionCount">2 active</span>
+                                <span class="text-xs text-[var(--text-muted)]" id="positionCount">0 active</span>
                             </div>
                         </div>
                         <div class="max-h-64 overflow-y-auto" id="positionsList">
-                            <!-- Positions will be rendered here -->
+                            <div class="p-4 text-center text-[var(--text-muted)] text-sm">No open positions</div>
                         </div>
                     </div>
 
                     <!-- Trade History -->
-                    <div class="card card-glow animate-fade-in stagger-4">
+                    <div class="card animate-fade-in stagger-4">
                         <div class="p-4 border-b border-[var(--border)]">
                             <div class="flex items-center justify-between">
                                 <h3 class="font-semibold">Trade History</h3>
-                                <span class="text-xs text-[var(--accent)]" id="totalTrades">12 trades</span>
+                                <span class="text-xs text-[var(--accent)]" id="totalTrades">0 trades</span>
                             </div>
                         </div>
                         <div class="max-h-72 overflow-y-auto" id="tradeHistoryList">
-                            <!-- Trade history will be rendered here -->
+                            <div class="p-4 text-center text-[var(--text-muted)] text-sm">No trade history</div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-
-    <!-- Mobile Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300">
@@ -673,8 +444,9 @@
     </div>
 
     <script>
-        // ==================== DATA & STATE ====================
+        // ==================== STATE MANAGEMENT ====================
         const state = {
+            currentSymbol: 'BTCUSDT',
             currentAsset: 'BTC',
             timeframe: '1m',
             tradeType: 'buy',
@@ -683,37 +455,75 @@
             candles: [],
             positions: [],
             tradeHistory: [],
-            aiRunning: false
+            aiRunning: false,
+            ws: null,
+            tickerWs: null,
+            currentPrice: 0
         };
 
-        const assetData = {
-            BTC: { name: 'Bitcoin', price: 67432.50, change: 2.34, high: 68150, low: 65820, volume: '2.4B', cap: '1.32T', color: '#f97316' },
-            ETH: { name: 'Ethereum', price: 3456.78, change: 1.89, high: 3520, low: 3380, volume: '1.2B', cap: '415B', color: '#3b82f6' },
-            SOL: { name: 'Solana', price: 178.45, change: -0.56, high: 185, low: 172, volume: '890M', cap: '78B', color: '#a855f7' }
+        // ==================== BINANCE API CONFIG ====================
+        const BINANCE_API = 'https://api.binance.com/api/v3';
+        const BINANCE_WS = 'wss://stream.binance.com:9443/ws';
+        
+        const TIMEFRAME_MAP = {
+            '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h'
         };
 
-        const aiSignals = [
-            { type: 'buy', confidence: 87, analysis: 'Strong bullish momentum detected. RSI showing oversold conditions with MACD crossover. Recommending LONG position with tight stop-loss at $66,800.' },
-            { type: 'sell', confidence: 72, analysis: 'Bearish divergence on 4H timeframe. Volume declining on upward moves. Consider taking profits or opening SHORT position.' },
-            { type: 'hold', confidence: 65, analysis: 'Market consolidating in a tight range. Waiting for clear breakout direction. Current risk/reward ratio unfavorable for new positions.' }
-        ];
-
-        // Initialize candles
-        function initCandles() {
-            state.candles = [];
-            let basePrice = assetData[state.currentAsset].price;
-            for (let i = 0; i < 60; i++) {
-                const volatility = basePrice * 0.003;
-                const open = basePrice + (Math.random() - 0.5) * volatility;
-                const close = open + (Math.random() - 0.5) * volatility;
-                const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-                const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-                state.candles.push({ open, high, low, close, volume: Math.random() * 1000000 });
-                basePrice = close;
+        // ==================== DATA FETCHING ====================
+        async function fetchKlines(symbol, interval = '1m', limit = 60) {
+            try {
+                const response = await fetch(`${BINANCE_API}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+                const data = await response.json();
+                
+                state.candles = data.map(d => ({
+                    openTime: d[0],
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5]),
+                    closeTime: d[6]
+                }));
+                
+                drawChart();
+            } catch (error) {
+                console.error('Error fetching klines:', error);
+                showToast('Connection Error', 'Failed to fetch market data', 'error');
             }
         }
 
-        // Initialize positions
-        function initPositions() {
-            state.positions = [
-                { id: 1, asset: 'BTC', type: 'long', size: 0.05,
+        async function fetch24hrTicker(symbol) {
+            try {
+                const response = await fetch(`${BINANCE_API}/ticker/24hr?symbol=${symbol}`);
+                const data = await response.json();
+                
+                updateTickerUI(data);
+            } catch (error) {
+                console.error('Error fetching ticker:', error);
+            }
+        }
+
+        // ==================== WEBSOCKET CONNECTION ====================
+        function connectWebSocket(symbol, interval = '1m') {
+            // Close existing connections
+            if (state.ws) state.ws.close();
+            if (state.tickerWs) state.tickerWs.close();
+
+            // Kline WebSocket
+            const klineStream = `${symbol.toLowerCase()}@kline_${interval}`;
+            const tickerStream = `${symbol.toLowerCase()}@ticker`;
+            
+            state.ws = new WebSocket(`${BINANCE_WS}/${klineStream}`);
+            
+            state.ws.onopen = () => {
+                document.getElementById('connectionStatus').textContent = 'Live';
+                document.getElementById('connectionStatus').className = 'text-[var(--accent)]';
+                document.getElementById('liveIndicator').style.background = 'var(--accent)';
+            };
+
+            state.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.k) {
+                    handleKlineUpdate(data.k);
+                }
+            };
