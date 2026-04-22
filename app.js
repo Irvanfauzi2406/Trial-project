@@ -1,710 +1,321 @@
-/* =========================================================
-   SmartStock AI — app.js (FULL WORKING VERSION FOR VERCEL)
-   ========================================================= */
-
-/* ── DEVELOPMENT MODE ── */
-const IS_DEV = true;
-
-/* ── DATA ── */
-const PRODUCTS = [
-  { id:1, name:"Susu Ultra Milk 1L",    cat:"Minuman", stock:142, min:50,  price:18500,  cost:13000, exp:"2025-05-28", em:"🥛" },
-  { id:2, name:"Yogurt Strawberry",     cat:"Dairy",   stock:38,  min:30,  price:12000,  cost:7500,  exp:"2025-06-02", em:"🍓" },
-  { id:3, name:"Daging Sapi 500g",      cat:"Protein", stock:25,  min:20,  price:85000,  cost:70000, exp:"2025-06-05", em:"🥩" },
-  { id:4, name:"Roti Tawar",            cat:"Bakery",  stock:60,  min:40,  price:12000,  cost:7200,  exp:"2025-06-10", em:"🍞" },
-  { id:5, name:"Ayam Fillet 500g",      cat:"Protein", stock:18,  min:25,  price:55000,  cost:42000, exp:"2025-06-15", em:"🍗" },
-  { id:6, name:"Telur Ayam Negeri",     cat:"Protein", stock:200, min:50,  price:27000,  cost:22000, exp:"2025-07-01", em:"🥚" },
-  { id:7, name:"Minuman Kaleng 330ml",  cat:"Minuman", stock:0,   min:30,  price:8500,   cost:6000,  exp:"2025-12-01", em:"🥤" },
-  { id:8, name:"Keju Slice",            cat:"Dairy",   stock:12,  min:20,  price:35000,  cost:28000, exp:"2025-06-20", em:"🧀" },
+// SmartStock - Main Application
+// Data produk
+const products = [
+  { id: 1, name: "Susu Ultra Milk 1L", category: "Minuman", stock: 142, minStock: 50, price: 18500, cost: 13000, expiry: "2025-06-15", emoji: "🥛" },
+  { id: 2, name: "Yogurt Stroberi", category: "Dairy", stock: 38, minStock: 30, price: 12000, cost: 7500, expiry: "2025-06-20", emoji: "🍓" },
+  { id: 3, name: "Daging Sapi Segar 500g", category: "Protein", stock: 25, minStock: 20, price: 85000, cost: 70000, expiry: "2025-06-10", emoji: "🥩" },
+  { id: 4, name: "Roti Tawar Gandum", category: "Bakery", stock: 60, minStock: 40, price: 12000, cost: 7200, expiry: "2025-06-18", emoji: "🍞" },
+  { id: 5, name: "Ayam Fillet 500g", category: "Protein", stock: 18, minStock: 25, price: 55000, cost: 42000, expiry: "2025-06-12", emoji: "🍗" },
+  { id: 6, name: "Telur Negeri 1kg", category: "Protein", stock: 200, minStock: 50, price: 27000, cost: 22000, expiry: "2025-07-01", emoji: "🥚" },
+  { id: 7, name: "Minuman Cola 330ml", category: "Minuman", stock: 0, minStock: 30, price: 8500, cost: 6000, expiry: "2025-12-01", emoji: "🥤" },
+  { id: 8, name: "Keju Slice 12pc", category: "Dairy", stock: 12, minStock: 20, price: 35000, cost: 28000, expiry: "2025-06-25", emoji: "🧀" }
 ];
 
-const PNL_DATA = [
-  { name:"Susu Ultra Milk 1L",   sell:8550000, cost:5100000, margin:40.35, status:"Profit"     },
-  { name:"Roti Tawar",           sell:3600000, cost:2160000, margin:40.00, status:"Profit"     },
-  { name:"Yogurt Strawberry",    sell:2875000, cost:1800000, margin:37.39, status:"Profit"     },
-  { name:"Daging Sapi",          sell:6200000, cost:5890000, margin:5.00,  status:"Low Margin" },
-  { name:"Ayam Fillet",          sell:4100000, cost:4350000, margin:-6.10, status:"Loss"       },
-  { name:"Minuman Kaleng",       sell:2050000, cost:2200000, margin:-7.32, status:"Loss"       },
+const pnlData = [
+  { name: "Susu Ultra Milk", sales: 8550000, cost: 5100000, margin: 40.35, status: "Profit" },
+  { name: "Roti Tawar", sales: 3600000, cost: 2160000, margin: 40.0, status: "Profit" },
+  { name: "Yogurt Stroberi", sales: 2875000, cost: 1800000, margin: 37.39, status: "Profit" },
+  { name: "Daging Sapi", sales: 6200000, cost: 5890000, margin: 5.0, status: "Low Margin" },
+  { name: "Ayam Fillet", sales: 4100000, cost: 4350000, margin: -6.1, status: "Loss" },
+  { name: "Minuman Cola", sales: 2050000, cost: 2200000, margin: -7.32, status: "Loss" }
 ];
 
-const SALES_DATA = [
-  { m:"Jan", s:32000000, c:21000000 },
-  { m:"Feb", s:38000000, c:25000000 },
-  { m:"Mar", s:41000000, c:27000000 },
-  { m:"Apr", s:36000000, c:24000000 },
-  { m:"Mei", s:45680000, c:28250000 },
-];
+let cart = [];
+let selectedProduct = null;
+let paymentMethod = "qris";
+let quantityMap = {};
 
-/* ── STATE ── */
-let cart        = [];
-let selProduct  = null;
-let payMethod   = "qris";
-let cdSec       = 899;
-let cdTimer     = null;
-let qtyMap      = {};
-let charts      = {};
+// Helper functions
+const formatRupiah = (num) => "Rp " + num.toLocaleString("id-ID");
+const daysUntil = (date) => Math.ceil((new Date(date) - new Date()) / 86400000);
 
-/* =========================================================
-   UTILS
-   ========================================================= */
-const rp = v => "Rp " + Number(v).toLocaleString("id-ID");
-const daysUntil = d => Math.ceil((new Date(d) - new Date()) / 86400000);
-
-function toast(msg) {
-  let el = document.getElementById("toast");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "toast";
-    el.innerHTML = '<span id="toast-msg"></span>';
-    document.body.appendChild(el);
-  }
-  const msgEl = document.getElementById("toast-msg");
-  if (msgEl) msgEl.textContent = msg;
-  el.className = "show";
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove("show"), 3000);
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  const msgEl = document.getElementById("toast-message");
+  msgEl.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2500);
 }
 
-function saveToLocalStorage() {
-  try {
-    localStorage.setItem('smartstock_cart', JSON.stringify(cart));
-    localStorage.setItem('smartstock_qtyMap', JSON.stringify(qtyMap));
-  } catch(e) {}
-}
-
-function loadFromLocalStorage() {
-  try {
-    const savedCart = localStorage.getItem('smartstock_cart');
-    const savedQtyMap = localStorage.getItem('smartstock_qtyMap');
-    if (savedCart) cart = JSON.parse(savedCart);
-    if (savedQtyMap) qtyMap = JSON.parse(savedQtyMap);
-    updateCartBadge();
-  } catch(e) {}
-}
-
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
-function navigate(id) {
+// Navigasi
+function navigate(pageId) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
   
-  const page = document.getElementById("page-" + id);
-  if (page) page.classList.add("active");
+  const targetPage = document.getElementById("page-" + pageId);
+  if (targetPage) targetPage.classList.add("active");
   
-  document.querySelectorAll(".nav-item").forEach(b => {
-    if (b.dataset.page === id) b.classList.add("active");
-  });
+  const activeNav = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+  if (activeNav) activeNav.classList.add("active");
   
-  // Initialize page
-  if (id === 'dashboard') initDashboard();
-  else if (id === 'penjualan') { renderProducts(); if (selProduct) renderAside(); }
-  else if (id === 'payment') initPayment();
-  else if (id === 'produk') initProdukPage();
-  else if (id === 'stok') initStokPage();
-  else if (id === 'expdate') initExpDate();
-  else if (id === 'laporan') setTimeout(initLaporan, 100);
-  else if (id === 'pnl') setTimeout(initPnL, 100);
-  else if (id === 'aiinsight') { if (document.getElementById("insights-grid")) generateInsights(); }
+  // Load page content
+  if (pageId === "dashboard") loadDashboard();
+  else if (pageId === "penjualan") { renderProducts(); updateCartSidebar(); }
+  else if (pageId === "produk") loadProductsTable();
+  else if (pageId === "stok") loadStockTable();
+  else if (pageId === "expdate") loadExpiredTable();
+  else if (pageId === "pnl") loadPnLTable();
+  else if (pageId === "payment") loadPaymentPage();
 }
 
-/* =========================================================
-   DASHBOARD
-   ========================================================= */
-function initDashboard() {
+// Dashboard
+function loadDashboard() {
   const dateEl = document.getElementById("dash-date");
   if (dateEl) {
-    dateEl.textContent = new Date().toLocaleDateString("id-ID", {
-      weekday: "long", day: "2-digit", month: "long", year: "numeric"
-    });
+    dateEl.textContent = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   }
   
-  // Expiry list
-  const expItems = PRODUCTS
-    .filter(p => p.stock > 0 && daysUntil(p.exp) <= 30)
-    .sort((a, b) => daysUntil(a.exp) - daysUntil(b.exp));
-  
-  const expList = document.getElementById("exp-list");
-  if (expList) {
-    expList.innerHTML = expItems.map(p => {
-      const d = daysUntil(p.exp);
-      const cls = d <= 7 ? "b-red" : d <= 14 ? "b-amber" : "b-blue";
-      const rec = d <= 7 ? "Flash Sale" : d <= 14 ? "Bundling" : "Promo";
-      return `
-        <div class="exp-item">
-          <div>
-            <div class="exp-prod-name">${p.em} ${p.name}</div>
-            <div class="exp-prod-date">${p.exp}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="exp-days-chip badge ${cls}">${d} hari</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${rec}</div>
-          </div>
-        </div>`;
-    }).join("");
-  }
-  
-  // Try to create charts if Chart.js is available
-  if (typeof Chart !== 'undefined') {
-    try {
-      // Donut chart
-      const ctx1 = document.getElementById("dash-pie");
-      if (ctx1) {
-        if (charts.dashPie) charts.dashPie.destroy();
-        charts.dashPie = new Chart(ctx1, {
-          type: "doughnut",
-          data: {
-            labels: ["In Stock", "Low Stock", "Out of Stock"],
-            datasets: [{
-              data: [892, 300, 64],
-              backgroundColor: ["#16a34a", "#d97706", "#dc2626"],
-              borderWidth: 0,
-            }]
-          },
-          options: { cutout: "68%", plugins: { legend: { display: false } } }
-        });
-      }
-      
-      // Bar chart
-      const ctx2 = document.getElementById("dash-bar");
-      if (ctx2) {
-        if (charts.dashBar) charts.dashBar.destroy();
-        charts.dashBar = new Chart(ctx2, {
-          type: "bar",
-          data: {
-            labels: SALES_DATA.map(s => s.m),
-            datasets: [
-              { label: "Penjualan", data: SALES_DATA.map(s => s.s), backgroundColor: "#16a34a", borderRadius: 6 },
-              { label: "Modal", data: SALES_DATA.map(s => s.c), backgroundColor: "#bfdbfe", borderRadius: 6 },
-            ]
-          },
-          options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
-        });
-      }
-    } catch(e) { console.log("Chart error:", e); }
+  const statsContainer = document.getElementById("stats-container");
+  if (statsContainer) {
+    statsContainer.innerHTML = `
+      <div class="stat-card"><div class="stat-icon" style="background:#dbeafe"><i class="fas fa-box" style="color:#2563eb;font-size:20px"></i></div><div class="stat-label">Total Produk</div><div class="stat-value">1.256</div><div style="font-size:11px;color:#10b981">↑ 8 baru</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#d1fae5"><i class="fas fa-check-circle" style="color:#10b981;font-size:20px"></i></div><div class="stat-label">In Stock</div><div class="stat-value">892</div><div style="font-size:11px;color:#64748b">71% dari total</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#fee2e2"><i class="fas fa-exclamation-triangle" style="color:#ef4444;font-size:20px"></i></div><div class="stat-label">Out of Stock</div><div class="stat-value">64</div><div style="font-size:11px;color:#ef4444">5% dari total</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#fed7aa"><i class="fas fa-clock" style="color:#f97316;font-size:20px"></i></div><div class="stat-label">Akan Expired</div><div class="stat-value">38</div><div style="font-size:11px;color:#f97316">≤30 hari</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#d1fae5"><i class="fas fa-chart-line" style="color:#10b981;font-size:20px"></i></div><div class="stat-label">Penjualan</div><div class="stat-value">45,68 Jt</div><div style="font-size:11px;color:#10b981">↑ 12,5%</div></div>
+    `;
   }
 }
 
-/* =========================================================
-   STORE / PENJUALAN
-   ========================================================= */
-let currentCat = "all";
+// Products
+let currentCategory = "all";
 
 function filterCat(btn, cat) {
-  document.querySelectorAll(".cat-pill").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".category-filter .btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
-  currentCat = cat;
+  currentCategory = cat;
   renderProducts();
 }
 
 function renderProducts() {
-  const list = currentCat === "all" ? PRODUCTS : PRODUCTS.filter(p => p.cat === currentCat);
-  const grid = document.getElementById("prod-grid");
+  const filtered = currentCategory === "all" ? products : products.filter(p => p.category === currentCategory);
+  const grid = document.getElementById("product-grid");
   if (!grid) return;
   
-  grid.innerHTML = list.map(p => `
-    <div class="prod-card ${selProduct?.id === p.id ? "selected" : ""}" onclick="selectProduct(${p.id})">
-      <span class="prod-emoji">${p.em}</span>
-      <div class="prod-name">${p.name}</div>
-      <div class="prod-cat-tag">${p.cat}</div>
-      <div class="prod-footer">
-        <span class="prod-price">${rp(p.price)}</span>
-        <span class="badge ${p.stock > p.min ? "b-green" : p.stock > 0 ? "b-amber" : "b-red"}">
-          ${p.stock > 0 ? "Stok: " + p.stock : "Habis"}
-        </span>
+  grid.innerHTML = filtered.map(p => `
+    <div class="product-card" onclick="selectProduct(${p.id})">
+      <div class="product-emoji">${p.emoji}</div>
+      <div class="product-name">${p.name}</div>
+      <div style="font-size:11px;color:#64748b;margin:4px 0">${p.category}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <span class="product-price">${formatRupiah(p.price)}</span>
+        <span class="badge ${p.stock > p.minStock ? 'badge-success' : p.stock > 0 ? 'badge-warning' : 'badge-danger'}">${p.stock > 0 ? p.stock : "Habis"}</span>
       </div>
-      ${p.stock > 0 ? 
-        `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px" onclick="event.stopPropagation();addToCart(${p.id})">+ Keranjang</button>` :
-        `<button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" disabled>Stok Habis</button>`}
+      ${p.stock > 0 ? `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px" onclick="event.stopPropagation();addToCart(${p.id})"><i class="fas fa-cart-plus"></i> Tambah</button>` : ''}
     </div>
   `).join("");
 }
 
 function selectProduct(id) {
-  selProduct = PRODUCTS.find(p => p.id === id);
-  renderProducts();
-  renderAside();
+  selectedProduct = products.find(p => p.id === id);
+  if (selectedProduct) updateCartSidebar();
 }
 
-function renderAside() {
-  const aside = document.getElementById("aside-content");
-  if (!aside || !selProduct) return;
-  const p = selProduct;
+function addToCart(productId) {
+  const product = products.find(p => p.id === productId);
+  if (!product || product.stock === 0) return;
   
-  aside.innerHTML = `
-    <div class="aside-inner">
-      <span class="aside-emoji">${p.em}</span>
-      <div class="aside-name">${p.name}</div>
-      <div class="aside-price">${rp(p.price)}</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px">
-        <span class="aside-stock-dot" style="background:${p.stock > 0 ? "#16a34a" : "#dc2626"}"></span>
-        <span style="font-size:12px;font-weight:600;color:${p.stock > 0 ? "var(--green)" : "var(--red)"}">
-          ${p.stock > 0 ? "Stok tersedia (" + p.stock + ")" : "Stok habis"}
-        </span>
-      </div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
-        Exp Date: <strong style="color:var(--amber)">${p.exp}</strong>
-      </p>
-      
-      <div class="pickup-box">
-        <div class="pickup-title">
-          <span>📦 Metode Pengambilan</span>
-          <span class="badge b-blue">Pickup Only</span>
-        </div>
-        <p style="font-size:11px;color:var(--blue);opacity:.8">Hanya tersedia di lokasi toko kami.</p>
-      </div>
-      
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <div class="qty-wrap">
-          <button class="qty-btn" onclick="chgQty(${p.id},-1)">−</button>
-          <span class="qty-val" id="qty-${p.id}">${qtyMap[p.id] || 1}</span>
-          <button class="qty-btn" onclick="chgQty(${p.id},1)">+</button>
-        </div>
-        ${p.stock > 0 ?
-          `<button class="btn btn-primary" style="flex:1" onclick="addToCart(${p.id})">Tambah ke Keranjang</button>` :
-          `<button class="btn btn-outline" style="flex:1" disabled>Stok Habis</button>`}
-      </div>
-      
-      ${cart.length > 0 ? `
-      <div class="cart-mini">
-        <div style="font-size:12px;font-weight:700;margin-bottom:10px">
-          🛒 Keranjang (${cart.reduce((a,c) => a+c.qty, 0)} item)
-        </div>
-        ${cart.map(c => `
-          <div class="cart-row">
-            <span>${c.em} ${c.name} ×${c.qty}</span>
-            <span style="font-weight:700">${rp(c.price * c.qty)}</span>
-          </div>
-        `).join("")}
-        <div class="cart-total-row">
-          <span>Total</span>
-          <span style="color:var(--green);font-weight:800">${rp(cart.reduce((a,c) => a+c.price*c.qty,0) + 2000)}</span>
-        </div>
-        <button class="btn btn-primary btn-lg" style="width:100%;margin-top:10px" onclick="navigate('payment')">
-          Checkout →
-        </button>
-      </div>` : ""}
-    </div>
-  `;
-}
-
-function chgQty(id, delta) {
-  if (!qtyMap[id]) qtyMap[id] = 1;
-  qtyMap[id] = Math.max(1, qtyMap[id] + delta);
-  const el = document.getElementById("qty-" + id);
-  if (el) el.textContent = qtyMap[id];
-  saveToLocalStorage();
-}
-
-function addToCart(id) {
-  const p = PRODUCTS.find(x => x.id === id);
-  if (!p || p.stock === 0) return;
-  const qty = qtyMap[id] || 1;
-  const ex = cart.find(c => c.id === id);
-  if (ex) ex.qty += qty;
-  else cart.push({ ...p, qty });
+  const qty = quantityMap[productId] || 1;
+  const existing = cart.find(c => c.id === productId);
+  if (existing) existing.qty += qty;
+  else cart.push({ ...product, qty });
+  
   updateCartBadge();
-  renderAside();
-  saveToLocalStorage();
-  toast("✓ " + p.name + " ditambahkan");
+  updateCartSidebar();
+  showToast(`${product.name} ditambahkan ke keranjang`);
 }
 
 function updateCartBadge() {
   const total = cart.reduce((a, c) => a + c.qty, 0);
-  const el = document.getElementById("cart-badge");
-  if (el) {
-    el.textContent = total;
-    el.style.display = total > 0 ? "inline-flex" : "none";
+  const badge = document.getElementById("cart-badge");
+  if (badge) {
+    badge.textContent = total;
+    badge.style.display = total > 0 ? "inline-flex" : "none";
   }
 }
 
-/* =========================================================
-   PAYMENT
-   ========================================================= */
-const PAY_METHODS = [
-  { id:"qris", ico:"▦", name:"QRIS", sub:"Bayar dengan QR Code" },
-  { id:"va", ico:"🏦", name:"Virtual Account", sub:"BCA, Mandiri, BRI" },
-  { id:"ew", ico:"📱", name:"E-Wallet", sub:"OVO, GoPay, DANA" },
-  { id:"cc", ico:"💳", name:"Kartu Kredit", sub:"Visa, Mastercard" },
-];
-
-function initPayment() {
-  renderMethods();
-  renderPayDetail();
-  renderPaySummary();
-  startCountdown();
-}
-
-function renderMethods() {
-  const el = document.getElementById("methods-list");
-  if (!el) return;
-  el.innerHTML = PAY_METHODS.map(m => `
-    <button class="method-btn ${m.id === payMethod ? "active" : ""}" onclick="selectMethod('${m.id}')">
-      <span class="method-ico">${m.ico}</span>
-      <div style="flex:1">
-        <div class="method-name">${m.name}</div>
-        <div class="method-sub">${m.sub}</div>
-      </div>
-      <div class="method-radio"></div>
-    </button>
-  `).join("");
-}
-
-function selectMethod(id) {
-  payMethod = id;
-  renderMethods();
-  renderPayDetail();
-}
-
-function renderPayDetail() {
-  const m = PAY_METHODS.find(x => x.id === payMethod);
-  const titleEl = document.getElementById("pay-method-title");
-  const bodyEl = document.getElementById("pay-method-body");
-  if (!titleEl || !bodyEl) return;
-  titleEl.textContent = m.name;
-  
-  bodyEl.innerHTML = `
-    <div style="text-align:center;padding:20px">
-      <div style="font-size:48px;margin-bottom:14px">${m.ico}</div>
-      <p style="font-size:14px;font-weight:700;margin-bottom:8px">${m.name}</p>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Klik konfirmasi untuk melanjutkan</p>
-      <button class="btn btn-primary btn-xl" onclick="simulatePay()">Konfirmasi Pembayaran</button>
-    </div>
-  `;
-}
-
-function startCountdown() {
-  if (cdTimer) clearInterval(cdTimer);
-  cdSec = 899;
-  cdTimer = setInterval(() => {
-    cdSec--;
-    const el = document.getElementById("countdown-el");
-    if (el) {
-      const mm = String(Math.floor(cdSec / 60)).padStart(2, "0");
-      const ss = String(cdSec % 60).padStart(2, "0");
-      el.textContent = mm + ":" + ss;
-    }
-    if (cdSec <= 0) clearInterval(cdTimer);
-  }, 1000);
-}
-
-function renderPaySummary() {
-  const sub = cart.reduce((a, c) => a + c.price * c.qty, 0);
-  const tot = sub + 2000;
-  const el = document.getElementById("pay-summary");
-  if (!el) return;
+function updateCartSidebar() {
+  const container = document.getElementById("cart-sidebar");
+  if (!container) return;
   
   if (cart.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:32px">🛒 Keranjang kosong</div>`;
+    container.innerHTML = `<p style="text-align:center;color:#94a3b8;padding:40px 0"><i class="fas fa-shopping-cart"></i> Keranjang kosong</p>`;
     return;
   }
   
-  el.innerHTML = `
+  const subtotal = cart.reduce((a, c) => a + c.price * c.qty, 0);
+  const total = subtotal + 2000;
+  
+  container.innerHTML = `
+    <h3 style="font-size:14px;margin-bottom:16px">Keranjang (${cart.reduce((a,c)=>a+c.qty,0)} item)</h3>
     ${cart.map(c => `
-      <div class="summary-item">
-        <span style="font-size:24px">${c.em}</span>
-        <div style="flex:1">
-          <div style="font-weight:600">${c.name}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${c.qty} × ${rp(c.price)}</div>
-        </div>
-        <div style="font-weight:700">${rp(c.price * c.qty)}</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:12px">
+        <span>${c.emoji} ${c.name} ×${c.qty}</span>
+        <span style="font-weight:600">${formatRupiah(c.price * c.qty)}</span>
       </div>
     `).join("")}
-    <div class="divider"></div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-      <span>Subtotal</span><span>${rp(sub)}</span>
+    <div style="border-top:1px solid #e2e8f0;margin:12px 0;padding-top:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Subtotal</span><span>${formatRupiah(subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Biaya layanan</span><span>${formatRupiah(2000)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:8px"><span>Total</span><span style="color:#10b981">${formatRupiah(total)}</span></div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-      <span>Biaya Layanan</span><span>${rp(2000)}</span>
-    </div>
-    <div class="summary-total-row">
-      <span style="font-weight:700">Total</span>
-      <span style="font-size:18px;font-weight:800;color:var(--green)">${rp(tot)}</span>
-    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="navigate('payment')"><i class="fas fa-arrow-right"></i> Checkout</button>
   `;
 }
 
-function simulatePay() {
-  clearInterval(cdTimer);
-  const successDiv = document.getElementById("pay-success");
-  if (successDiv) successDiv.style.display = "block";
-  cart = [];
-  updateCartBadge();
-  saveToLocalStorage();
-  toast("🎉 Pembayaran berhasil!");
-}
-
-/* =========================================================
-   EXP DATE PAGE
-   ========================================================= */
-function initExpDate() {
-  const items = PRODUCTS.map(p => ({ ...p, days: daysUntil(p.exp) })).sort((a, b) => a.days - b.days);
+// Payment
+function loadPaymentPage() {
+  const methodsContainer = document.getElementById("payment-methods");
+  if (methodsContainer) {
+    methodsContainer.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="method-option ${paymentMethod === 'qris' ? 'active' : ''}" onclick="selectPaymentMethod('qris')" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer">
+          <i class="fas fa-qrcode" style="font-size:20px"></i><div style="flex:1"><div style="font-weight:600">QRIS</div><div style="font-size:11px;color:#64748b">Scan QR Code</div></div>
+          <div class="radio ${paymentMethod === 'qris' ? 'selected' : ''}" style="width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e1;background:${paymentMethod === 'qris' ? '#10b981' : 'white'}"></div>
+        </div>
+        <div class="method-option ${paymentMethod === 'bca' ? 'active' : ''}" onclick="selectPaymentMethod('bca')" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer">
+          <i class="fas fa-university" style="font-size:20px"></i><div style="flex:1"><div style="font-weight:600">Transfer Bank</div><div style="font-size:11px;color:#64748b">BCA, Mandiri, BNI</div></div>
+          <div class="radio ${paymentMethod === 'bca' ? 'selected' : ''}" style="width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e1;background:${paymentMethod === 'bca' ? '#10b981' : 'white'}"></div>
+        </div>
+      </div>
+    `;
+  }
   
-  const kritis = document.getElementById("exp-kritis");
-  const warning = document.getElementById("exp-warning");
-  const safe = document.getElementById("exp-safe");
-  if (kritis) kritis.textContent = items.filter(i => i.days <= 7).length;
-  if (warning) warning.textContent = items.filter(i => i.days > 7 && i.days <= 30).length;
-  if (safe) safe.textContent = items.filter(i => i.days > 30).length;
-  
-  const tbody = document.getElementById("exp-tbody");
-  if (tbody) {
-    tbody.innerHTML = items.map(p => {
-      const d = p.days;
-      const cls = d <= 7 ? "b-red" : d <= 30 ? "b-amber" : "b-green";
-      const rec = d <= 7 ? "🔥 Flash Sale" : d <= 14 ? "📦 Bundling" : d <= 30 ? "🎯 Promo" : "✅ Normal";
-      return `<tr>
-        <td><div class="td-name"><span>${p.em}</span>${p.name}</div></td>
-        <td>${p.cat}</td><td>${p.stock}</td>
-        <td>${p.exp}</td><td><span class="badge ${cls}">${d} hari</span></td>
-        <td style="font-weight:700">${rec}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="toast('Promo diaktifkan')">Aktifkan</button></td>
-      </tr>`;
-    }).join("");
+  const summaryContainer = document.getElementById("order-summary");
+  if (summaryContainer) {
+    const subtotal = cart.reduce((a, c) => a + c.price * c.qty, 0);
+    summaryContainer.innerHTML = `
+      ${cart.map(c => `<div style="display:flex;justify-content:space-between;margin-bottom:10px"><span>${c.name} ×${c.qty}</span><span>${formatRupiah(c.price * c.qty)}</span></div>`).join("")}
+      <div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px">
+        <div style="display:flex;justify-content:space-between"><span>Total</span><span style="font-weight:700">${formatRupiah(subtotal + 2000)}</span></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="processPayment()"><i class="fas fa-check"></i> Bayar Sekarang</button>
+    `;
   }
 }
 
-/* =========================================================
-   PRODUK PAGE
-   ========================================================= */
-function initProdukPage() {
-  const tbody = document.getElementById("produk-tbody");
+function selectPaymentMethod(method) {
+  paymentMethod = method;
+  loadPaymentPage();
+}
+
+function processPayment() {
+  document.getElementById("payment-success").style.display = "block";
+  cart = [];
+  updateCartBadge();
+  showToast("Pembayaran berhasil! Terima kasih.");
+  setTimeout(() => navigate("dashboard"), 2000);
+}
+
+// Tables
+function loadProductsTable() {
+  const tbody = document.getElementById("products-table");
   if (!tbody) return;
-  tbody.innerHTML = PRODUCTS.map(p => {
-    const mg = (((p.price - p.cost) / p.price) * 100).toFixed(1);
+  tbody.innerHTML = products.map(p => {
+    const margin = ((p.price - p.cost) / p.price * 100).toFixed(1);
     return `<tr>
-      <td><div class="td-name"><span>${p.em}</span>${p.name}</div></td>
-      <td>${p.cat}</td><td class="val-profit">${rp(p.price)}</td>
-      <td>${rp(p.cost)}</td><td class="${mg >= 20 ? 'val-profit' : 'val-low'}">${mg}%</td>
-      <td style="font-weight:700;color:${p.stock===0?'var(--red)':p.stock<=p.min?'var(--amber)':'var(--green)'}">${p.stock}</td>
-      <td>${p.min}</td><td>${p.exp}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="toast('Edit ${p.name}')">Edit</button></td>
+      <td><span style="font-size:24px;margin-right:8px">${p.emoji}</span> ${p.name}</td>
+      <td>${p.category}</td>
+      <td>${formatRupiah(p.price)}</td>
+      <td>${formatRupiah(p.cost)}</td>
+      <td style="color:${margin >= 20 ? '#10b981' : margin >= 0 ? '#f97316' : '#ef4444'}">${margin}%</td>
+      <td>${p.stock}</td>
+      <td>${p.minStock}</td>
+      <td>${p.expiry}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="showToast('Edit ${p.name}')"><i class="fas fa-edit"></i></button></td>
     </tr>`;
   }).join("");
 }
 
-/* =========================================================
-   STOK PAGE
-   ========================================================= */
-function initStokPage() {
-  const tbody = document.getElementById("stok-tbody");
+function loadStockTable() {
+  const tbody = document.getElementById("stock-table");
   if (!tbody) return;
-  tbody.innerHTML = PRODUCTS.map(p => `<tr>
-    <td><div class="td-name"><span>${p.em}</span>${p.name}</div></td>
-    <td>${p.cat}</td>
-    <td style="font-weight:700;color:${p.stock===0?'var(--red)':p.stock<=p.min?'var(--amber)':'var(--green)'}">${p.stock}</td>
-    <td>${p.min}</td><td>${p.exp}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="toast('Update stok ${p.name}')">Update</button></td>
-  </tr>`).join("");
+  tbody.innerHTML = products.map(p => `
+    <tr>
+      <td><span style="font-size:24px;margin-right:8px">${p.emoji}</span> ${p.name}</td>
+      <td>${p.category}</td>
+      <td style="font-weight:600;color:${p.stock === 0 ? '#ef4444' : p.stock <= p.minStock ? '#f97316' : '#10b981'}">${p.stock}</td>
+      <td>${p.minStock}</td>
+      <td>${p.expiry}</td>
+      <td><span class="badge ${p.stock === 0 ? 'badge-danger' : p.stock <= p.minStock ? 'badge-warning' : 'badge-success'}">${p.stock === 0 ? 'Habis' : p.stock <= p.minStock ? 'Low Stock' : 'Aman'}</span></td>
+      <td><button class="btn btn-primary btn-sm" onclick="showToast('Update stok ${p.name}')"><i class="fas fa-sync-alt"></i> Update</button></td>
+    </tr>
+  `).join("");
 }
 
-/* =========================================================
-   P&L PAGE
-   ========================================================= */
-function initPnL() {
-  const tbody = document.getElementById("pnl-tbody");
-  if (tbody) {
-    tbody.innerHTML = PNL_DATA.map(d => {
-      const profit = d.sell - d.cost;
-      const bdg = d.status === "Profit" ? "b-green" : d.status === "Loss" ? "b-red" : "b-amber";
-      return `<tr>
-        <td>${d.name}</td><td>${rp(d.sell)}</td><td>${rp(d.cost)}</td>
-        <td class="${profit >= 0 ? 'val-profit' : 'val-loss'}">${rp(profit)}</td>
-        <td class="${d.margin >= 20 ? 'val-profit' : d.margin >= 0 ? 'val-low' : 'val-loss'}">${d.margin}%</td>
-        <td><span class="badge ${bdg}">${d.status}</span></td>
-      </tr>`;
-    }).join("");
-  }
+function loadExpiredTable() {
+  const tbody = document.getElementById("expired-table");
+  if (!tbody) return;
+  const sorted = [...products].sort((a, b) => daysUntil(a.expiry) - daysUntil(b.expiry));
+  tbody.innerHTML = sorted.map(p => {
+    const days = daysUntil(p.expiry);
+    const status = days <= 7 ? "Kritis" : days <= 30 ? "Perhatian" : "Aman";
+    return `<tr>
+      <td><span style="font-size:24px;margin-right:8px">${p.emoji}</span> ${p.name}</td>
+      <td>${p.category}</td>
+      <td>${p.stock}</td>
+      <td>${p.expiry}</td>
+      <td><span class="badge ${days <= 7 ? 'badge-danger' : days <= 30 ? 'badge-warning' : 'badge-success'}">${days} hari</span></td>
+      <td>${days <= 7 ? '🔥 Flash Sale 30%' : days <= 30 ? '📦 Bundle Promo' : '✅ Normal'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="showToast('Promo diaktifkan')"><i class="fas fa-tag"></i> Promo</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function loadPnLTable() {
+  const tbody = document.getElementById("pnl-table");
+  if (!tbody) return;
+  tbody.innerHTML = pnlData.map(p => {
+    const profit = p.sales - p.cost;
+    return `<tr>
+      <td><strong>${p.name}</strong></td>
+      <td>${formatRupiah(p.sales)}</td>
+      <td>${formatRupiah(p.cost)}</td>
+      <td style="color:${profit >= 0 ? '#10b981' : '#ef4444'}">${formatRupiah(profit)}</td>
+      <td style="color:${p.margin >= 20 ? '#10b981' : p.margin >= 0 ? '#f97316' : '#ef4444'}">${p.margin}%</td>
+      <td><span class="badge ${p.status === 'Profit' ? 'badge-success' : p.status === 'Loss' ? 'badge-danger' : 'badge-warning'}">${p.status}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+// AI Insights
+function generateInsights() {
+  const container = document.getElementById("insights-container");
+  if (!container) return;
   
-  // Chart if available
-  if (typeof Chart !== 'undefined') {
-    const ctx = document.getElementById("pnl-chart");
-    if (ctx) {
-      if (charts.pnl) charts.pnl.destroy();
-      charts.pnl = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: PNL_DATA.map(d => d.name.split(" ")[0]),
-          datasets: [{
-            label: "Margin %",
-            data: PNL_DATA.map(d => d.margin),
-            backgroundColor: PNL_DATA.map(d => d.margin >= 20 ? "#16a34a" : d.margin >= 0 ? "#d97706" : "#dc2626"),
-            borderRadius: 5,
-          }]
-        },
-        options: { indexAxis: "y", responsive: true, plugins: { legend: { display: false } } }
-      });
-    }
-  }
-}
-
-function calcMargin() {
-  const sell = parseFloat(document.getElementById("calc-sell")?.value);
-  const cost = parseFloat(document.getElementById("calc-cost")?.value);
-  const qty = parseFloat(document.getElementById("calc-qty")?.value) || 1;
-  if (!sell || !cost) { toast("Isi harga jual dan modal"); return; }
-  const profit = (sell - cost) * qty;
-  const margin = ((sell - cost) / sell) * 100;
-  
-  const resultDiv = document.getElementById("calc-result");
-  if (resultDiv) resultDiv.style.display = "grid";
-  const rProfit = document.getElementById("r-profit");
-  const rMargin = document.getElementById("r-margin");
-  const rBep = document.getElementById("r-bep");
-  const rRev = document.getElementById("r-rev");
-  if (rProfit) rProfit.innerHTML = profit >= 0 ? rp(profit) : rp(profit);
-  if (rMargin) rMargin.innerHTML = margin.toFixed(2) + "%";
-  if (rBep) rBep.textContent = Math.ceil(cost / (sell - cost)) + " unit";
-  if (rRev) rRev.textContent = rp(sell * qty);
-}
-
-async function pnlAI() {
-  const btn = document.getElementById("btn-pnl-ai");
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span> Analyzing...`;
-  }
-  const box = document.getElementById("pnl-ai-body");
-  if (box) {
-    setTimeout(() => {
-      box.innerHTML = `
-        <p class="ai-body">📊 <strong>Analisis:</strong> 2 produk merugi (Ayam Fillet & Minuman Kaleng).<br><br>
-        💡 <strong>Rekomendasi:</strong><br>
-        • Naikkan harga Ayam Fillet 5%<br>
-        • Cari supplier baru untuk minuman<br>
-        • Fokus promosi ke 3 produk profit tertinggi</p>
-        <div class="potential-box">
-          <div class="potential-label">Potensi peningkatan profit</div>
-          <div class="potential-value">Rp 2.850.000 <span style="font-size:13px">/bulan</span></div>
-        </div>`;
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = "🤖 Analyze AI";
-      }
-    }, 1000);
-  }
-}
-
-/* =========================================================
-   AI INSIGHTS
-   ========================================================= */
-async function generateInsights() {
-  const btn = document.getElementById("btn-insights");
-  const grid = document.getElementById("insights-grid");
-  if (!grid) return;
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span> Generating...`;
-  }
-  
-  const mockInsights = [
-    { title: "Optimasi Stok Minuman", description: "Minuman meningkat 32% di akhir pekan.", priority: "high", category: "Inventory", action: "Tambah stok 20% setiap Kamis" },
-    { title: "Produk Expired Mendekat", description: "8 produk akan expired dalam 14 hari.", priority: "high", category: "Expiry", action: "Buat bundle promo diskon" },
-    { title: "Margin Negatif", description: "2 produk memiliki margin negatif.", priority: "high", category: "Finance", action: "Evaluasi harga jual" },
-    { title: "Peluang Cross-Selling", description: "Pembeli susu cenderung beli roti.", priority: "medium", category: "Sales", action: "Buat paket hemat" },
+  const insights = [
+    { title: "Optimasi Stok Minuman", desc: "Penjualan minuman meningkat 32% di akhir pekan", action: "Tambah stok 20% setiap Kamis", priority: "high" },
+    { title: "Produk Mendekati Expired", desc: "8 produk akan kadaluarsa dalam 14 hari", action: "Buat bundle promo diskon", priority: "high" },
+    { title: "Margin Negatif", desc: "2 produk memiliki margin negatif", action: "Evaluasi harga jual", priority: "high" },
+    { title: "Cross-Selling Opportunity", desc: "Pembeli susu cenderung membeli roti", action: "Buat paket hemat", priority: "medium" }
   ];
   
-  const PCOLORS = { high: "#dc2626", medium: "#d97706", low: "#16a34a" };
-  const PBADGE = { high: "b-red", medium: "b-amber", low: "b-green" };
-  
-  grid.innerHTML = mockInsights.map(ins => `
-    <div class="insight-card" style="border-top-color:${PCOLORS[ins.priority]}">
-      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
-        <div class="insight-card-title">${ins.title}</div>
-        <span class="badge ${PBADGE[ins.priority]}">${ins.priority}</span>
-      </div>
-      <p class="insight-card-desc">${ins.description}</p>
-      <div class="insight-action-box">
-        <p class="insight-action-txt">→ ${ins.action}</p>
-      </div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:7px">📂 ${ins.category}</div>
+  container.innerHTML = insights.map(ins => `
+    <div style="background:white;border-radius:16px;border:1px solid #e2e8f0;padding:20px;border-top:3px solid ${ins.priority === 'high' ? '#ef4444' : '#f97316'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><h3 style="font-size:14px">${ins.title}</h3><span class="badge ${ins.priority === 'high' ? 'badge-danger' : 'badge-warning'}">${ins.priority === 'high' ? 'Penting' : 'Sedang'}</span></div>
+      <p style="font-size:13px;color:#475569;margin-bottom:12px">${ins.desc}</p>
+      <div style="background:#f8fafc;border-radius:10px;padding:10px"><span style="font-size:12px;font-weight:600">→ ${ins.action}</span></div>
     </div>
   `).join("");
-  
-  if (btn) {
-    btn.disabled = false;
-    btn.innerHTML = "✨ Generate Insights";
-  }
 }
 
-async function askAdvisor() {
-  const q = document.getElementById("advisor-q")?.value;
-  if (!q) return;
-  const ans = document.getElementById("advisor-answer");
-  const txt = document.getElementById("advisor-text");
-  if (ans) ans.style.display = "block";
-  if (txt) txt.textContent = "AI sedang menganalisa...";
-  
-  setTimeout(() => {
-    if (txt) {
-      txt.textContent = "Terima kasih atas pertanyaannya. Untuk hasil terbaik, pastikan data stok dan penjualan Anda selalu terupdate secara berkala.";
-    }
-  }, 800);
-}
-
-/* =========================================================
-   LAPORAN PAGE
-   ========================================================= */
-function initLaporan() {
-  if (typeof Chart !== 'undefined') {
-    const ctx1 = document.getElementById("laporan-line");
-    if (ctx1) {
-      if (charts.lapLine) charts.lapLine.destroy();
-      charts.lapLine = new Chart(ctx1, {
-        type: "line",
-        data: {
-          labels: SALES_DATA.map(s => s.m),
-          datasets: [
-            { label: "Penjualan", data: SALES_DATA.map(s => s.s), borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,.1)", fill: true, tension: 0.3 },
-            { label: "Modal", data: SALES_DATA.map(s => s.c), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.05)", fill: true, tension: 0.3 },
-          ]
-        },
-        options: { responsive: true, maintainAspectRatio: true }
-      });
-    }
-    
-    const ctx2 = document.getElementById("laporan-pie");
-    if (ctx2) {
-      if (charts.lapPie) charts.lapPie.destroy();
-      charts.lapPie = new Chart(ctx2, {
-        type: "doughnut",
-        data: {
-          labels: ["Minuman", "Protein", "Dairy", "Bakery"],
-          datasets: [{ data: [35, 28, 20, 17], backgroundColor: ["#16a34a", "#2563eb", "#0891b2", "#d97706"] }]
-        },
-        options: { plugins: { legend: { position: "right" } }, cutout: "55%" }
-      });
-    }
-  }
-}
-
-/* =========================================================
-   EXPOSE GLOBAL FUNCTIONS
-   ========================================================= */
+// Global functions
 window.navigate = navigate;
 window.filterCat = filterCat;
 window.selectProduct = selectProduct;
 window.addToCart = addToCart;
-window.chgQty = chgQty;
-window.selectMethod = selectMethod;
-window.simulatePay = simulatePay;
-window.calcMargin = calcMargin;
-window.pnlAI = pnlAI;
+window.selectPaymentMethod = selectPaymentMethod;
+window.processPayment = processPayment;
 window.generateInsights = generateInsights;
-window.askAdvisor = askAdvisor;
-window.toast = toast;
+window.showToast = showToast;
 
-/* =========================================================
-   BOOTSTRAP
-   ========================================================= */
+// Initialize
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("SmartStock AI starting...");
-  loadFromLocalStorage();
-  initDashboard();
-  initExpDate();
-  initProdukPage();
-  initStokPage();
+  loadDashboard();
   renderProducts();
-  initPayment();
-  navigate('dashboard');
-  toast("✨ SmartStock AI siap!");
+  loadProductsTable();
+  loadStockTable();
+  loadExpiredTable();
+  loadPnLTable();
+  showToast("SmartStock siap digunakan");
 });
