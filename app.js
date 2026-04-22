@@ -1,6 +1,9 @@
 /* =========================================================
-   SmartStock AI — app.js
+   SmartStock AI — app.js (FIXED VERSION)
    ========================================================= */
+
+/* ── DEVELOPMENT MODE ── */
+const IS_DEV = true;  // Matikan API calls saat development
 
 /* ── DATA ── */
 const PRODUCTS = [
@@ -40,6 +43,20 @@ let cdTimer     = null;
 let qtyMap      = {};
 let charts      = {};
 
+// Simpan ke localStorage
+function saveToLocalStorage() {
+    localStorage.setItem('smartstock_cart', JSON.stringify(cart));
+    localStorage.setItem('smartstock_qtyMap', JSON.stringify(qtyMap));
+}
+
+function loadFromLocalStorage() {
+    const savedCart = localStorage.getItem('smartstock_cart');
+    const savedQtyMap = localStorage.getItem('smartstock_qtyMap');
+    if (savedCart) cart = JSON.parse(savedCart);
+    if (savedQtyMap) qtyMap = JSON.parse(savedQtyMap);
+    updateCartBadge();
+}
+
 /* =========================================================
    UTILS
    ========================================================= */
@@ -53,6 +70,14 @@ function toast(msg, type = "default") {
   el.className = "show";
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+// Wait untuk Chart.js
+function waitForChart() {
+    return new Promise((resolve) => {
+        if (typeof Chart !== 'undefined') resolve();
+        else setTimeout(() => waitForChart().then(resolve), 100);
+    });
 }
 
 /* =========================================================
@@ -79,7 +104,6 @@ function navigate(id) {
   const page = document.getElementById("page-" + id);
   if (page) page.classList.add("active");
 
-  // Match nav button
   document.querySelectorAll(".nav-item").forEach(b => {
     if (b.dataset.page === id) b.classList.add("active");
   });
@@ -90,56 +114,61 @@ function navigate(id) {
 /* =========================================================
    DASHBOARD
    ========================================================= */
-function initDashboard() {
+async function initDashboard() {
   const dateEl = document.getElementById("dash-date");
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString("id-ID", {
     weekday:"long", day:"2-digit", month:"long", year:"numeric"
   });
 
+  await waitForChart();
+  
   /* Donut chart */
   const ctx1 = document.getElementById("dash-pie");
-  if (!ctx1) return;
-  if (charts.dashPie) charts.dashPie.destroy();
-  charts.dashPie = new Chart(ctx1.getContext("2d"), {
-    type: "doughnut",
-    data: {
-      labels: ["In Stock", "Low Stock", "Out of Stock"],
-      datasets: [{
-        data: [892, 300, 64],
-        backgroundColor: ["#16a34a", "#d97706", "#dc2626"],
-        borderWidth: 3,
-        borderColor: "#fff",
-        hoverOffset: 6,
-      }]
-    },
-    options: {
-      cutout: "68%",
-      plugins: { legend: { display: false } },
-      animation: { animateRotate: true, duration: 800 },
-    }
-  });
+  if (ctx1 && typeof Chart !== 'undefined') {
+    if (charts.dashPie) charts.dashPie.destroy();
+    charts.dashPie = new Chart(ctx1.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels: ["In Stock", "Low Stock", "Out of Stock"],
+        datasets: [{
+          data: [892, 300, 64],
+          backgroundColor: ["#16a34a", "#d97706", "#dc2626"],
+          borderWidth: 3,
+          borderColor: "#fff",
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        cutout: "68%",
+        plugins: { legend: { display: false } },
+        animation: { animateRotate: true, duration: 800 },
+      }
+    });
+  }
 
   /* Bar chart */
   const ctx2 = document.getElementById("dash-bar");
-  if (charts.dashBar) charts.dashBar.destroy();
-  charts.dashBar = new Chart(ctx2.getContext("2d"), {
-    type: "bar",
-    data: {
-      labels: SALES_DATA.map(s => s.m),
-      datasets: [
-        { label:"Penjualan", data: SALES_DATA.map(s => s.s), backgroundColor:"#16a34a", borderRadius:6, borderSkipped:false },
-        { label:"Modal",     data: SALES_DATA.map(s => s.c), backgroundColor:"#bfdbfe", borderRadius:6, borderSkipped:false },
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid:{ display:false }, ticks:{ color:"#9ca3af", font:{size:11} } },
-        y: { grid:{ color:"#f3f4f6" }, ticks:{ color:"#9ca3af", font:{size:11}, callback: v => (v/1e6).toFixed(0)+"Jt" } },
+  if (ctx2 && typeof Chart !== 'undefined') {
+    if (charts.dashBar) charts.dashBar.destroy();
+    charts.dashBar = new Chart(ctx2.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: SALES_DATA.map(s => s.m),
+        datasets: [
+          { label:"Penjualan", data: SALES_DATA.map(s => s.s), backgroundColor:"#16a34a", borderRadius:6, borderSkipped:false },
+          { label:"Modal",     data: SALES_DATA.map(s => s.c), backgroundColor:"#bfdbfe", borderRadius:6, borderSkipped:false },
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid:{ display:false }, ticks:{ color:"#9ca3af", font:{size:11} } },
+          y: { grid:{ color:"#f3f4f6" }, ticks:{ color:"#9ca3af", font:{size:11}, callback: v => (v/1e6).toFixed(0)+"Jt" } },
+        }
       }
-    }
-  });
+    });
+  }
 
   /* Expiry list */
   const expItems = PRODUCTS
@@ -302,6 +331,7 @@ function chgQty(id, delta) {
   qtyMap[id] = Math.max(1, qtyMap[id] + delta);
   const el = document.getElementById("qty-" + id);
   if (el) el.textContent = qtyMap[id];
+  saveToLocalStorage();
 }
 
 function addToCart(id) {
@@ -312,6 +342,7 @@ function addToCart(id) {
   if (ex) ex.qty += qty; else cart.push({ ...p, qty });
   updateCartBadge();
   renderAside();
+  saveToLocalStorage();
   toast("✓ " + p.name + " ditambahkan ke keranjang");
 }
 
@@ -364,7 +395,6 @@ function selectMethod(id) {
 function buildQRSVG() {
   const bits = [1,0,1,1,0,1,0,1,1,0,1,0,1,1,0,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,0,1];
   let svg = `<svg width="148" height="148" xmlns="http://www.w3.org/2000/svg"><rect width="148" height="148" fill="white"/>`;
-  // Corner squares
   for (const [ox, oy] of [[8,8],[96,8],[8,96]]) {
     svg += `<rect x="${ox}" y="${oy}" width="44" height="44" rx="4" fill="#111"/>`;
     svg += `<rect x="${ox+6}" y="${oy+6}" width="32" height="32" rx="2" fill="white"/>`;
@@ -487,6 +517,7 @@ function simulatePay() {
   document.getElementById("pay-success").style.display = "block";
   cart = [];
   updateCartBadge();
+  saveToLocalStorage();
   toast("🎉 Pembayaran berhasil! Terima kasih.");
 }
 
@@ -522,7 +553,9 @@ function initExpDate() {
 /* =========================================================
    P&L
    ========================================================= */
-function initPnL() {
+async function initPnL() {
+  await waitForChart();
+  
   const tbody = document.getElementById("pnl-tbody");
   if (tbody) {
     tbody.innerHTML = PNL_DATA.map(d => {
@@ -539,31 +572,31 @@ function initPnL() {
     }).join("");
   }
 
-  /* Horizontal bar chart */
   const ctx = document.getElementById("pnl-chart");
-  if (!ctx) return;
-  if (charts.pnl) charts.pnl.destroy();
-  charts.pnl = new Chart(ctx.getContext("2d"), {
-    type: "bar",
-    data: {
-      labels: PNL_DATA.map(d => d.name.split(" ").slice(0, 2).join(" ")),
-      datasets: [{
-        label: "Margin %",
-        data: PNL_DATA.map(d => d.margin),
-        backgroundColor: PNL_DATA.map(d => d.margin >= 20 ? "#16a34a" : d.margin >= 0 ? "#d97706" : "#dc2626"),
-        borderRadius: 5, borderSkipped: false,
-      }]
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: "#f3f4f6" }, ticks: { color: "#9ca3af", font:{ size:11 }, callback: v => v + "%" } },
-        y: { grid: { display: false }, ticks: { color: "#6b7280", font:{ size:11 } } },
+  if (ctx && typeof Chart !== 'undefined') {
+    if (charts.pnl) charts.pnl.destroy();
+    charts.pnl = new Chart(ctx.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: PNL_DATA.map(d => d.name.split(" ").slice(0, 2).join(" ")),
+        datasets: [{
+          label: "Margin %",
+          data: PNL_DATA.map(d => d.margin),
+          backgroundColor: PNL_DATA.map(d => d.margin >= 20 ? "#16a34a" : d.margin >= 0 ? "#d97706" : "#dc2626"),
+          borderRadius: 5, borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "#f3f4f6" }, ticks: { color: "#9ca3af", font:{ size:11 }, callback: v => v + "%" } },
+          y: { grid: { display: false }, ticks: { color: "#6b7280", font:{ size:11 } } },
+        }
       }
-    }
-  });
+    });
+  }
 }
 
 function calcMargin() {
@@ -585,75 +618,71 @@ function calcMargin() {
   document.getElementById("r-rev").textContent    = rp(sell * qty);
 }
 
+// MOCK AI untuk development
 async function pnlAI() {
   const btn = document.getElementById("btn-pnl-ai");
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner"></span> Analyzing...`;
   const box = document.getElementById("pnl-ai-body");
+  
+  // Loading skeleton
   box.innerHTML = [80,60,70,50,65].map(w =>
     `<div class="skeleton" style="height:12px;width:${w}%;margin-bottom:8px"></div>`
   ).join("");
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 800,
-        messages: [{
-          role: "user",
-          content: `Kamu analyst keuangan SmartStock (toko sembako). Analisa data P&L ini dan berikan 4-5 rekomendasi singkat dan actionable dalam bahasa Indonesia untuk meminimalisir kerugian:
-${PNL_DATA.map(d => `• ${d.name}: margin ${d.margin}%, status ${d.status}`).join("\n")}
-Format: poin singkat saja, langsung ke action.`
-        }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.map(b => b.text || "").join("") || "Tidak ada respons dari AI.";
-    box.innerHTML = `<p class="ai-body">${text.replace(/\n/g, "<br>")}</p>
-      <div class="potential-box" style="margin-top:14px">
-        <div class="potential-label">Potensi peningkatan profit (estimasi AI)</div>
-        <div class="potential-value">Rp 2.850.000 <span style="font-size:13px;font-weight:500">/&nbsp;bulan</span></div>
-      </div>`;
-  } catch (e) {
-    box.innerHTML = `<p style="color:var(--red);font-size:12px">⚠ Gagal terhubung ke AI. Pastikan koneksi tersedia dan coba lagi.</p>`;
-  }
-  btn.disabled = false;
-  btn.innerHTML = "🤖 Analyze AI";
+  // Simulasi delay API
+  setTimeout(() => {
+    if (IS_DEV) {
+      box.innerHTML = `
+        <p class="ai-body" style="margin-bottom:12px">
+          📊 <strong>Analisis Cepat:</strong> Dari 6 produk yang dianalisis, 2 produk mengalami kerugian (Ayam Fillet & Minuman Kaleng).<br><br>
+          💡 <strong>Rekomendasi:</strong><br>
+          • Naikkan harga jual Ayam Fillet minimal 5% untuk mencapai BEP<br>
+          • Hentikan atau ganti supplier Minuman Kaleng<br>
+          • Fokus promosi ke 3 produk dengan margin tertinggi (Susu, Roti, Yogurt)
+        </p>
+        <div class="potential-box" style="margin-top:14px">
+          <div class="potential-label">Potensi peningkatan profit (estimasi AI)</div>
+          <div class="potential-value">Rp 2.850.000 <span style="font-size:13px;font-weight:500">/&nbsp;bulan</span></div>
+        </div>`;
+    } else {
+      // Real API call (commented for hackathon)
+      box.innerHTML = `<p style="color:var(--red);font-size:12px">⚠ API memerlukan key. Gunakan mode development.</p>`;
+    }
+    btn.disabled = false;
+    btn.innerHTML = "🤖 Analyze AI";
+  }, 1000);
 }
 
 /* =========================================================
-   AI INSIGHT
+   AI INSIGHT (MOCK untuk hackathon)
    ========================================================= */
 async function generateInsights() {
   const btn  = document.getElementById("btn-insights");
   const grid = document.getElementById("insights-grid");
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner"></span> Analyzing...`;
+  
+  // Loading skeleton
   grid.innerHTML = [1,2,3].map(() =>
     `<div class="skeleton" style="height:170px;border-radius:16px"></div>`
   ).join("");
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1200,
-        messages: [{
-          role: "user",
-          content: `Kamu AI business advisor untuk toko sembako SmartStock. Berikan 6 insight bisnis dalam format JSON array. Setiap item punya field: title (singkat), description (1-2 kalimat), priority ("high"/"medium"/"low"), category, action (1 kalimat). Data konteks: 1256 produk aktif, total penjualan Rp45,68 Jt/bulan, margin rata-rata 38%, 12 produk merugi, 38 produk akan exp dalam 30 hari. Balas dengan JSON array saja, tanpa teks lain.`
-        }]
-      })
-    });
-    const data = await res.json();
-    const raw  = data.content?.map(b => b.text || "").join("").replace(/```json|```/g, "").trim();
-    const list = JSON.parse(raw);
+  // Simulasi delay API
+  setTimeout(() => {
+    const mockInsights = [
+      { title: "Optimasi Stok Minuman", description: "Minuman kaleng mengalami peningkatan permintaan 32% di akhir pekan. Persiapkan stok lebih banyak.", priority: "high", category: "Inventory", action: "Tambah stok 20% setiap Kamis" },
+      { title: "Produk Expired Mendekat", description: "8 produk akan expired dalam 14 hari. Potensi kerugian Rp 2.4jt jika tidak ditangani.", priority: "high", category: "Expiry", action: "Buat bundle promo diskon 30%" },
+      { title: "Margin Negatif", description: "Ayam Fillet dan Minuman Kaleng memiliki margin negatif. Segera evaluasi pricing.", priority: "high", category: "Finance", action: "Naikkan harga 5-10% atau cari supplier baru" },
+      { title: "Peluang Cross-Selling", description: "Pembeli Susu Ultra Milk cenderung membeli Roti Tawar (correlation +67%).", priority: "medium", category: "Sales", action: "Buat paket hemat susu + roti" },
+      { title: "Rekomendasi Supplier", description: "Harga daging sapi 12% di atas rata-rata pasar. Ada supplier alternatif lebih murah.", priority: "medium", category: "Procurement", action: "Cek harga dari 3 supplier baru" },
+      { title: "Jam Sibuk Toko", description: "Puncak pembelian terjadi pukul 16.00-19.00 (weekday) dan 10.00-12.00 (weekend).", priority: "low", category: "Operations", action: "Tambah kasir di jam sibuk" }
+    ];
+    
     const PCOLORS = { high:"#dc2626", medium:"#d97706", low:"#16a34a" };
     const PBADGE  = { high:"b-red",   medium:"b-amber",  low:"b-green" };
-    grid.innerHTML = list.map(ins => `
+    
+    grid.innerHTML = mockInsights.map(ins => `
       <div class="insight-card" style="border-top-color:${PCOLORS[ins.priority] || "#16a34a"}">
         <div style="display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:7px">
           <div class="insight-card-title">${ins.title}</div>
@@ -665,15 +694,10 @@ async function generateInsights() {
         </div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:7px">📂 ${ins.category}</div>
       </div>`).join("");
-  } catch (e) {
-    grid.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;color:var(--red);padding:32px">
-        <div style="font-size:32px;margin-bottom:8px">⚠</div>
-        <p>Gagal mengambil insights. Coba lagi.</p>
-      </div>`;
-  }
-  btn.disabled = false;
-  btn.innerHTML = "✨ Generate Insights";
+    
+    btn.disabled = false;
+    btn.innerHTML = "✨ Generate Insights";
+  }, 1200);
 }
 
 async function askAdvisor() {
@@ -687,26 +711,25 @@ async function askAdvisor() {
   ans.style.display = "block";
   txt.textContent = "AI sedang menganalisa pertanyaan Anda...";
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 600,
-        messages: [{
-          role: "user",
-          content: `Kamu AI advisor untuk toko sembako SmartStock (1256 produk, Rp45,68Jt/bulan, margin 38%). Jawab dalam bahasa Indonesia yang singkat dan praktis (maksimal 3 paragraf): ${q}`
-        }]
-      })
-    });
-    const data = await res.json();
-    txt.textContent = data.content?.map(b => b.text || "").join("") || "Tidak ada respons.";
-  } catch {
-    txt.textContent = "Gagal menghubungi AI. Periksa koneksi Anda.";
-  }
-  btn.disabled = false;
-  btn.innerHTML = "Tanya →";
+  setTimeout(() => {
+    if (IS_DEV) {
+      const answers = {
+        "margin": "Untuk meningkatkan margin, fokus pada 3 hal: 1) Negosiasi harga dengan supplier, 2) Kurangi diskon berlebihan, 3) Bundle produk high-margin dengan low-margin.",
+        "stok": "Gunakan metode EOQ (Economic Order Quantity) untuk optimasi stok. Untuk produk fast-moving, set reorder point di 1.5x lead time demand.",
+        "expired": "Terapkan strategi FIFO (First In First Out) ketat. Untuk produk mendekati expired, buat flash sale atau donasikan untuk tax deduction.",
+        "default": "Terima kasih atas pertanyaannya. Untuk hasil terbaik, pastikan Anda telah mengupdate data stok dan penjualan secara berkala."
+      };
+      let answer = answers.default;
+      if (q.toLowerCase().includes("margin")) answer = answers.margin;
+      else if (q.toLowerCase().includes("stok")) answer = answers.stok;
+      else if (q.toLowerCase().includes("expired") || q.toLowerCase().includes("kadaluarsa")) answer = answers.expired;
+      txt.textContent = answer;
+    } else {
+      txt.textContent = "Mode development: API Anthropic memerlukan API key. Gunakan IS_DEV = true untuk mock responses.";
+    }
+    btn.disabled = false;
+    btn.innerHTML = "Tanya →";
+  }, 800);
 }
 
 /* =========================================================
@@ -734,7 +757,7 @@ function initProdukPage() {
           <button class="btn btn-outline btn-sm" onclick="toast('✏ Edit ${p.name}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="toast('🗑 Produk dihapus')">Hapus</button>
         </div>
-      </td>
+       </td>
     </tr>`;
   }).join("");
 }
@@ -763,9 +786,11 @@ function initStokPage() {
 /* =========================================================
    LAPORAN
    ========================================================= */
-function initLaporan() {
+async function initLaporan() {
+  await waitForChart();
+  
   const ctx1 = document.getElementById("laporan-line");
-  if (ctx1) {
+  if (ctx1 && typeof Chart !== 'undefined') {
     if (charts.lapLine) charts.lapLine.destroy();
     charts.lapLine = new Chart(ctx1.getContext("2d"), {
       type: "line",
@@ -788,7 +813,7 @@ function initLaporan() {
   }
 
   const ctx2 = document.getElementById("laporan-pie");
-  if (ctx2) {
+  if (ctx2 && typeof Chart !== 'undefined') {
     if (charts.lapPie) charts.lapPie.destroy();
     charts.lapPie = new Chart(ctx2.getContext("2d"), {
       type: "doughnut",
@@ -805,13 +830,44 @@ function initLaporan() {
 }
 
 /* =========================================================
-   BOOT
+   EXPOSE ALL FUNCTIONS TO GLOBAL WINDOW (FIX #1)
    ========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
+window.navigate = navigate;
+window.filterCat = filterCat;
+window.selectProduct = selectProduct;
+window.addToCart = addToCart;
+window.chgQty = chgQty;
+window.selectMethod = selectMethod;
+window.simulatePay = simulatePay;
+window.calcMargin = calcMargin;
+window.pnlAI = pnlAI;
+window.generateInsights = generateInsights;
+window.askAdvisor = askAdvisor;
+window.toast = toast;
+
+/* =========================================================
+   BOOT (FIX #2 - Wait for Chart.js)
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("SmartStock AI starting...");
+  
+  // Load dari localStorage
+  loadFromLocalStorage();
+  
+  // Wait untuk Chart.js
+  await waitForChart();
+  console.log("Chart.js loaded");
+  
+  // Initialize semua halaman
   initDashboard();
   initExpDate();
   initProdukPage();
   initStokPage();
   renderProducts();
   initPayment();
+  
+  // Set default active page
+  navigate('dashboard');
+  
+  toast("✨ SmartStock AI siap digunakan!");
 });
