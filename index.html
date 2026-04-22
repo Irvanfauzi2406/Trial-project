@@ -1,529 +1,776 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Openclaw AI Trading Terminal (Live)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #0a0e17;
-            --bg-secondary: #111827;
-            --bg-card: #1a2234;
-            --border: #2a3548;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --accent: #00d4aa;
-            --accent-glow: rgba(0, 212, 170, 0.3);
-            --danger: #ef4444;
-            --danger-glow: rgba(239, 68, 68, 0.3);
-            --warning: #f59e0b;
-            --success: #22c55e;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .mono { font-family: 'JetBrains Mono', monospace; }
-
-        .bg-pattern {
-            position: fixed;
-            inset: 0;
-            background-image: 
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 212, 170, 0.08), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0, 150, 255, 0.05), transparent);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .grid-overlay {
-            position: fixed;
-            inset: 0;
-            background-image: 
-                linear-gradient(rgba(42, 53, 72, 0.3) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(42, 53, 72, 0.3) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
-            z-index: 0;
-            opacity: 0.4;
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), #00b894);
-            color: var(--bg-primary);
-            font-weight: 600;
-            padding: 12px 24px;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px var(--accent-glow);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-outline:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            background: rgba(0, 212, 170, 0.05);
-        }
-
-        .btn-outline.active {
-            border-color: var(--accent);
-            color: var(--accent);
-            background: rgba(0, 212, 170, 0.1);
-        }
-
-        .input-field {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 16px;
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        #chartCanvas { width: 100%; height: 100%; display: block; }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-        .animate-fade-in { animation: fadeInUp 0.6s ease forwards; }
-        .stagger-1 { animation-delay: 0.1s; opacity: 0; }
-        .stagger-2 { animation-delay: 0.2s; opacity: 0; }
-        .stagger-3 { animation-delay: 0.3s; opacity: 0; }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .signal-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .signal-buy { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
-        .signal-sell { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-        .signal-hold { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
-
-        .trade-item { padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.2s ease; }
-        .trade-item:hover { background: rgba(255, 255, 255, 0.02); }
-        .trade-item:last-child { border-bottom: none; }
-
-        .asset-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .asset-btn:hover { background: rgba(255, 255, 255, 0.05); }
-        .asset-btn.active { background: rgba(0, 212, 170, 0.1); border-color: var(--accent); color: var(--accent); }
-
-        .status-online { color: var(--success); }
-        .status-connecting { color: var(--warning); }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartStock AI — Manajemen Inventori Cerdas</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="bg-pattern"></div>
-    <div class="grid-overlay"></div>
 
-    <div class="relative z-10 min-h-screen">
-        <!-- Header -->
-        <header class="border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-xl sticky top-0 z-30">
-            <div class="max-w-[1800px] mx-auto px-4 lg:px-6 py-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 animate-fade-in">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-emerald-600 flex items-center justify-center">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-[var(--bg-primary)]">
-                                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 class="text-lg font-bold tracking-tight">Openclaw</h1>
-                            <p class="text-xs text-[var(--text-muted)]">AI Trading Agent</p>
-                        </div>
-                    </div>
+<!-- ═══════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════ -->
+<aside id="sidebar">
 
-                    <div class="hidden md:flex items-center gap-2 bg-[var(--bg-secondary)] rounded-xl p-1.5 animate-fade-in stagger-1">
-                        <button class="asset-btn active" data-symbol="BTCUSDT" data-asset="BTC">BTC</button>
-                        <button class="asset-btn" data-symbol="ETHUSDT" data-asset="ETH">ETH</button>
-                        <button class="asset-btn" data-symbol="SOLUSDT" data-asset="SOL">SOL</button>
-                    </div>
+  <div class="logo-wrap">
+    <div class="logo-mark">S</div>
+    <div>
+      <div class="logo-name">SmartStock AI</div>
+      <div class="logo-tag">Inventory Management</div>
+    </div>
+  </div>
 
-                    <div class="flex items-center gap-4 animate-fade-in stagger-2">
-                        <div class="hidden sm:flex items-center gap-2 text-sm">
-                            <div class="live-dot" id="liveIndicator"></div>
-                            <span class="text-[var(--text-secondary)]" id="connectionStatus">Connecting...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="max-w-[1800px] mx-auto px-4 lg:px-6 py-6">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Left - Chart & Stats -->
-                <div class="flex-1 space-y-6">
-                    <!-- Price Header -->
-                    <div class="card p-6 animate-fade-in stagger-1">
-                        <div class="flex flex-wrap items-start justify-between gap-4">
-                            <div>
-                                <h2 class="text-2xl font-bold" id="assetName">BTC/USDT</h2>
-                                <p class="text-[var(--text-muted)] text-sm">Real-time Binance Data</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-3xl font-bold mono" id="currentPrice">Loading...</p>
-                                <div class="flex items-center justify-end gap-2 mt-1">
-                                    <span class="mono text-sm" id="priceChange">--</span>
-                                    <span class="text-[var(--text-muted)] text-sm">24h</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[var(--border)]">
-                            <div>
-                                <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">24h High</p>
-                                <p class="text-lg font-semibold mono mt-1" id="high24h">--</p>
-                            </div>
-                            <div>
-                                <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">24h Low</p>
-                                <p class="text-lg font-semibold mono mt-1" id="low24h">--                            </div>
-                            <div>
-                                <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">24h Volume</p>
-                                <p class="text-lg font-semibold mono mt-1" id="volume24h">--</p>
-                            </div>
-                            <div>
-                                <p class="text-[var(--text-muted)] text-xs uppercase tracking-wider">Trades (24h)</p>
-                                <p class="text-lg font-semibold mono mt-1" id="tradeCount">--</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Chart Section -->
-                    <div class="card animate-fade-in stagger-2">
-                        <div class="flex items-center justify-between p-4 border-b border-[var(--border)]">
-                            <div class="flex items-center gap-2">
-                                <span class="text-[var(--text-secondary)] text-sm">Timeframe:</span>
-                                <div class="flex gap-1">
-                                    <button class="btn-outline text-xs py-1.5 px-3 timeframe-btn active" data-tf="1m">1m</button>
-                                    <button class="btn-outline text-xs py-1.5 px-3 timeframe-btn" data-tf="5m">5m</button>
-                                    <button class="btn-outline text-xs py-1.5 px-3 timeframe-btn" data-tf="15m">15m</button>
-                                    <button class="btn-outline text-xs py-1.5 px-3 timeframe-btn" data-tf="1h">1H</button>
-                                    <button class="btn-outline text-xs py-1.5 px-3 timeframe-btn" data-tf="4h">4H</button>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[var(--text-muted)] text-xs">Last update:</span>
-                                <span class="mono text-xs text-[var(--accent)]" id="lastUpdate">--:--:--</span>
-                            </div>
-                        </div>
-                        <div class="p-4" style="height: 420px;">
-                            <canvas id="chartCanvas"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- AI Agent Panel -->
-                    <div class="card animate-fade-in stagger-3">
-                        <div class="p-4 border-b border-[var(--border)]">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-teal-600 flex items-center justify-center">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--bg-primary)]">
-                                            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-                                            <circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold">Openclaw AI Agent</h3>
-                                        <p class="text-xs text-[var(--text-muted)]">Autonomous Trading Intelligence</p>
-                                    </div>
-                                </div>
-                                <span class="signal-badge signal-hold" id="aiSignal">ANALYZING</span>
-                            </div>
-                        </div>
-                        
-                        <div class="p-4">
-                            <div class="bg-[var(--bg-secondary)] rounded-xl p-4 mb-4">
-                                <p class="text-sm text-[var(--text-secondary)] mb-2">AI Analysis</p>
-                                <p class="text-sm leading-relaxed" id="aiAnalysis">Connecting to market data stream...</p>
-                            </div>
-
-                            <div class="grid grid-cols-3 gap-4 mb-4">
-                                <div class="text-center p-3 bg-[var(--bg-secondary)] rounded-xl">
-                                    <p class="text-2xl font-bold text-[var(--accent)] mono" id="confidence">--%</p>
-                                    <p class="text-xs text-[var(--text-muted)] mt-1">Confidence</p>
-                                </div>
-                                <div class="text-center p-3 bg-[var(--bg-secondary)] rounded-xl">
-                                    <p class="text-2xl font-bold text-[var(--success)] mono" id="winRate">72%</p>
-                                    <p class="text-xs text-[var(--text-muted)] mt-1">Win Rate</p>
-                                </div>
-                                <div class="text-center p-3 bg-[var(--bg-secondary)] rounded-xl">
-                                    <p class="text-2xl font-bold text-[var(--warning)] mono" id="riskLevel">MED</p>
-                                    <p class="text-xs text-[var(--text-muted)] mt-1">Risk Level</p>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-3">
-                                <button class="btn-primary flex-1 flex items-center justify-center gap-2" id="aiExecuteBtn">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polygon points="5 3 19 12 5 21 5 3"/>
-                                    </svg>
-                                    Execute AI Trade
-                                </button>
-                                <button class="btn-outline" id="aiStopBtn">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="6" y="6" width="12" height="12"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right - Trading Panel -->
-                <div class="w-full lg:w-80 space-y-6">
-                    <!-- Manual Trade -->
-                    <div class="card animate-fade-in stagger-2">
-                        <div class="p-4 border-b border-[var(--border)]">
-                            <h3 class="font-semibold">Manual Trade</h3>
-                        </div>
-                        <div class="p-4 space-y-4">
-                            <div class="flex gap-2">
-                                <button class="flex-1 py-3 rounded-xl font-semibold transition-all trade-type-btn active-buy" data-type="buy">Buy</button>
-                                <button class="flex-1 py-3 rounded-xl font-semibold transition-all trade-type-btn" data-type="sell">Sell</button>
-                            </div>
-
-                            <div>
-                                <label class="text-xs text-[var(--text-muted)] uppercase tracking-wider">Amount (USDT)</label>
-                                <div class="relative mt-2">
-                                    <input type="number" class="input-field pr-16" placeholder="0.00" id="tradeAmount" value="100">
-                                    <button class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--accent)] hover:underline" onclick="setMaxAmount()">MAX</button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="text-xs text-[var(--text-muted)] uppercase tracking-wider">Leverage</label>
-                                <div class="flex gap-2 mt-2">
-                                    <button class="btn-outline text-xs flex-1 leverage-btn" data-lev="1">1x</button>
-                                    <button class="btn-outline text-xs flex-1 leverage-btn active" data-lev="5">5x</button>
-                                    <button class="btn-outline text-xs flex-1 leverage-btn" data-lev="10">10x</button>
-                                    <button class="btn-outline text-xs flex-1 leverage-btn" data-lev="20">20x</button>
-                                </div>
-                            </div>
-
-                            <div class="bg-[var(--bg-secondary)] rounded-xl p-4 space-y-2">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-[var(--text-muted)]">Entry Price</span>
-                                    <span class="mono" id="entryPrice">--</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-[var(--text-muted)]">Position Size</span>
-                                    <span class="mono" id="positionSize">$500.00</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-[var(--text-muted)]">Est. Liq. Price</span>
-                                    <span class="mono text-[var(--danger)]" id="liqPrice">--</span>
-                                </div>
-                            </div>
-
-                            <button class="w-full py-4 rounded-xl font-semibold text-lg transition-all bg-gradient-to-r from-green-500 to-emerald-600 text-white" id="submitTradeBtn">
-                                Buy BTC
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Positions -->
-                    <div class="card animate-fade-in stagger-3">
-                        <div class="p-4 border-b border-[var(--border)]">
-                            <div class="flex items-center justify-between">
-                                <h3 class="font-semibold">Open Positions</h3>
-                                <span class="text-xs text-[var(--text-muted)]" id="positionCount">0 active</span>
-                            </div>
-                        </div>
-                        <div class="max-h-64 overflow-y-auto" id="positionsList">
-                            <div class="p-4 text-center text-[var(--text-muted)] text-sm">No open positions</div>
-                        </div>
-                    </div>
-
-                    <!-- Trade History -->
-                    <div class="card animate-fade-in stagger-4">
-                        <div class="p-4 border-b border-[var(--border)]">
-                            <div class="flex items-center justify-between">
-                                <h3 class="font-semibold">Trade History</h3>
-                                <span class="text-xs text-[var(--accent)]" id="totalTrades">0 trades</span>
-                            </div>
-                        </div>
-                        <div class="max-h-72 overflow-y-auto" id="tradeHistoryList">
-                            <div class="p-4 text-center text-[var(--text-muted)] text-sm">No trade history</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+  <nav>
+    <div class="nav-section">
+      <div class="nav-label">Utama</div>
+      <button class="nav-item active" data-page="dashboard"  onclick="navigate('dashboard')">
+        <span class="nav-ico">⊞</span> Dashboard
+      </button>
+      <button class="nav-item" data-page="produk" onclick="navigate('produk')">
+        <span class="nav-ico">📦</span> Produk
+      </button>
+      <button class="nav-item" data-page="stok" onclick="navigate('stok')">
+        <span class="nav-ico">🗃️</span> Stok
+      </button>
+      <button class="nav-item" data-page="pembelian" onclick="navigate('pembelian')">
+        <span class="nav-ico">🛍️</span> Pembelian / PO
+      </button>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300">
-        <div class="card px-6 py-4 flex items-center gap-3">
-            <div id="toastIcon"></div>
-            <div>
-                <p class="font-semibold" id="toastTitle"></p>
-                <p class="text-sm text-[var(--text-muted)]" id="toastMessage"></p>
-            </div>
+    <div class="nav-section">
+      <div class="nav-label">Penjualan</div>
+      <button class="nav-item" data-page="penjualan" onclick="navigate('penjualan')">
+        <span class="nav-ico">🛒</span> Toko Online
+      </button>
+      <button class="nav-item" data-page="payment" onclick="navigate('payment')">
+        <span class="nav-ico">💳</span> Payment Gateway
+      </button>
+      <button class="nav-item" data-page="laporan" onclick="navigate('laporan')">
+        <span class="nav-ico">📊</span> Laporan
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Kecerdasan AI</div>
+      <button class="nav-item" data-page="expdate" onclick="navigate('expdate')">
+        <span class="nav-ico">⏰</span> Exp Date Alert
+      </button>
+      <button class="nav-item" data-page="pnl" onclick="navigate('pnl')">
+        <span class="nav-ico">💹</span> Margin &amp; P&amp;L
+      </button>
+      <button class="nav-item" data-page="aiinsight" onclick="navigate('aiinsight')">
+        <span class="nav-ico">✨</span> AI Insight
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Sistem</div>
+      <button class="nav-item" data-page="settings" onclick="navigate('settings')">
+        <span class="nav-ico">⚙️</span> Pengaturan
+      </button>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-ava">R</div>
+    <div>
+      <div class="user-name">Rizky Ananda</div>
+      <div class="user-role">Owner · SmartStock</div>
+    </div>
+  </div>
+</aside>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════ -->
+<div id="main">
+
+  <!-- ══════════ DASHBOARD ══════════ -->
+  <div id="page-dashboard" class="page active">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub" id="dash-date">Memuat tanggal...</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-outline btn-sm">📅 17–24 Mei 2024</button>
+        <button class="btn btn-primary btn-sm" onclick="navigate('penjualan')">🛒 Buka Toko</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-card-stripe" style="background:var(--blue)"></div>
+          <div class="stat-icon-wrap" style="background:#eff6ff;color:var(--blue)">📦</div>
+          <div class="stat-label">Total Produk</div>
+          <div class="stat-value" style="color:var(--blue)">1.256</div>
+          <div class="stat-trend trend-up">↑ 8 produk baru hari ini</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-card-stripe" style="background:var(--green)"></div>
+          <div class="stat-icon-wrap" style="background:var(--green-lt);color:var(--green)">✅</div>
+          <div class="stat-label">In Stock</div>
+          <div class="stat-value" style="color:var(--green)">892</div>
+          <div class="stat-trend trend-up">71% dari total produk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-stripe" style="background:var(--red)"></div>
+          <div class="stat-icon-wrap" style="background:var(--red-lt);color:var(--red)">⚠️</div>
+          <div class="stat-label">Out of Stock</div>
+          <div class="stat-value" style="color:var(--red)">64</div>
+          <div class="stat-trend trend-dn">5% dari total produk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-stripe" style="background:var(--amber)"></div>
+          <div class="stat-icon-wrap" style="background:var(--amber-lt);color:var(--amber)">⏰</div>
+          <div class="stat-label">Akan Expired ≤30 hr</div>
+          <div class="stat-value" style="color:var(--amber)">38</div>
+          <div class="stat-trend trend-warn">Perlu tindakan segera</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-stripe" style="background:var(--green)"></div>
+          <div class="stat-icon-wrap" style="background:var(--green-lt);color:var(--green)">💰</div>
+          <div class="stat-label">Total Penjualan</div>
+          <div class="stat-value" style="color:var(--green)">45,68 Jt</div>
+          <div class="stat-trend trend-up">↑ 12,5% vs periode lalu</div>
+        </div>
+      </div>
+
+      <!-- Row 2: Chart + Expiry + AI -->
+      <div class="g-3">
+
+        <!-- Donut Chart -->
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#f0fdf4">📊</div>
+            Ringkasan Stok
+          </div>
+          <div class="chart-wrap">
+            <canvas id="dash-pie" height="175"></canvas>
+          </div>
+          <div class="chart-legend" style="flex-direction:column;gap:6px;margin-top:14px">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#16a34a;border-radius:50%"></div>
+              <span style="flex:1">In Stock</span>
+              <strong style="color:var(--text)">892 (71%)</strong>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#d97706;border-radius:50%"></div>
+              <span style="flex:1">Low Stock</span>
+              <strong style="color:var(--text)">300 (24%)</strong>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#dc2626;border-radius:50%"></div>
+              <span style="flex:1">Out of Stock</span>
+              <strong style="color:var(--text)">64 (5%)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expiring Products -->
+        <div class="card">
+          <div class="sec-hdr" style="margin-bottom:10px">
+            <div class="card-title" style="margin:0">
+              <div class="card-title-icon" style="background:#fffbeb">⏰</div>
+              Akan Expired
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('expdate')">Lihat semua →</button>
+          </div>
+          <div id="exp-list"></div>
+        </div>
+
+        <!-- AI Recommendation -->
+        <div class="ai-card">
+          <div class="ai-header">
+            <div class="ai-title" style="color:var(--green-d)">
+              ✨ Rekomendasi AI
+            </div>
+          </div>
+          <p style="font-size:12px;color:#166534;line-height:1.55;margin-bottom:10px">
+            Terdapat <strong>38 produk</strong> akan expired dalam 30 hari — potensi kerugian
+            <strong style="color:var(--red)">Rp 2.450.000</strong>
+          </p>
+          <p style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:6px">Tindakan yang disarankan:</p>
+          <ul class="ai-rec-list">
+            <li>Buat promo diskon untuk 15 produk terdekat expired</li>
+            <li>Lakukan bundling untuk 9 produk dairy</li>
+            <li>Alihkan ke cabang lain untuk 5 produk</li>
+            <li>Donasikan 4 produk yang tidak terjual</li>
+          </ul>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="toast('✓ Semua rekomendasi berhasil diterapkan!')">
+            Terapkan Semua Rekomendasi
+          </button>
+        </div>
+      </div>
+
+      <!-- Sales Bar Chart -->
+      <div class="card">
+        <div class="sec-hdr">
+          <div class="card-title" style="margin:0">
+            <div class="card-title-icon" style="background:#f0fdf4">📈</div>
+            Tren Penjualan vs Modal
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Penjualan</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#bfdbfe"></div> Modal</div>
+          </div>
+        </div>
+        <canvas id="dash-bar" height="90"></canvas>
+      </div>
+
+      <!-- AI Insight Banner -->
+      <div class="insight-banner">
+        <div class="insight-banner-icon">✨</div>
+        <div style="flex:1">
+          <div class="insight-title">AI Insight — Stok Minuman</div>
+          <div class="insight-text">
+            Berdasarkan pola penjualan 4 minggu terakhir, kategori <strong>Minuman Dingin</strong> mengalami lonjakan 32% setiap akhir pekan.
+            Disarankan menambah stok 20% pada hari Kamis–Jumat untuk mengoptimalkan penjualan weekend.
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="navigate('aiinsight')">Detail →</button>
+      </div>
+
     </div>
+  </div>
 
-    <script>
-        // ==================== STATE MANAGEMENT ====================
-        const state = {
-            currentSymbol: 'BTCUSDT',
-            currentAsset: 'BTC',
-            timeframe: '1m',
-            tradeType: 'buy',
-            leverage: 5,
-            amount: 100,
-            candles: [],
-            positions: [],
-            tradeHistory: [],
-            aiRunning: false,
-            ws: null,
-            tickerWs: null,
-            currentPrice: 0
-        };
 
-        // ==================== BINANCE API CONFIG ====================
-        const BINANCE_API = 'https://api.binance.com/api/v3';
-        const BINANCE_WS = 'wss://stream.binance.com:9443/ws';
-        
-        const TIMEFRAME_MAP = {
-            '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h'
-        };
+  <!-- ══════════ PENJUALAN (STORE) ══════════ -->
+  <div id="page-penjualan" class="page">
+    <div class="store-layout">
 
-        // ==================== DATA FETCHING ====================
-        async function fetchKlines(symbol, interval = '1m', limit = 60) {
-            try {
-                const response = await fetch(`${BINANCE_API}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
-                const data = await response.json();
-                
-                state.candles = data.map(d => ({
-                    openTime: d[0],
-                    open: parseFloat(d[1]),
-                    high: parseFloat(d[2]),
-                    low: parseFloat(d[3]),
-                    close: parseFloat(d[4]),
-                    volume: parseFloat(d[5]),
-                    closeTime: d[6]
-                }));
-                
-                drawChart();
-            } catch (error) {
-                console.error('Error fetching klines:', error);
-                showToast('Connection Error', 'Failed to fetch market data', 'error');
-            }
-        }
+      <!-- Product Grid -->
+      <div class="store-main">
+        <div class="store-topbar">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:26px">🛍</span>
+            <div>
+              <div class="store-brand">ShopEasy</div>
+              <div class="store-brand-sub">Toko Online SmartStock</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input class="form-input" placeholder="🔍 Cari produk kebutuhanmu..." style="width:230px;background:var(--bg)"/>
+            <button class="btn btn-outline btn-sm">❤️ Favorit</button>
+            <button class="btn btn-outline btn-sm">📦 Riwayat</button>
+            <button class="btn btn-primary btn-sm" onclick="navigate('payment')" style="position:relative">
+              🛒 Keranjang
+              <span id="cart-badge" style="display:none;background:#dc2626;color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;font-weight:700"></span>
+            </button>
+          </div>
+        </div>
 
-        async function fetch24hrTicker(symbol) {
-            try {
-                const response = await fetch(`${BINANCE_API}/ticker/24hr?symbol=${symbol}`);
-                const data = await response.json();
-                
-                updateTickerUI(data);
-            } catch (error) {
-                console.error('Error fetching ticker:', error);
-            }
-        }
+        <div class="cat-pills">
+          <button class="cat-pill active" onclick="filterCat(this,'all')">📋 Semua</button>
+          <button class="cat-pill" onclick="filterCat(this,'Minuman')">🥤 Minuman</button>
+          <button class="cat-pill" onclick="filterCat(this,'Dairy')">🥛 Dairy</button>
+          <button class="cat-pill" onclick="filterCat(this,'Protein')">🥩 Protein</button>
+          <button class="cat-pill" onclick="filterCat(this,'Bakery')">🍞 Bakery</button>
+        </div>
 
-        // ==================== WEBSOCKET CONNECTION ====================
-        function connectWebSocket(symbol, interval = '1m') {
-            // Close existing connections
-            if (state.ws) state.ws.close();
-            if (state.tickerWs) state.tickerWs.close();
+        <div class="prod-grid" id="prod-grid"></div>
+      </div>
 
-            // Kline WebSocket
-            const klineStream = `${symbol.toLowerCase()}@kline_${interval}`;
-            const tickerStream = `${symbol.toLowerCase()}@ticker`;
-            
-            state.ws = new WebSocket(`${BINANCE_WS}/${klineStream}`);
-            
-            state.ws.onopen = () => {
-                document.getElementById('connectionStatus').textContent = 'Live';
-                document.getElementById('connectionStatus').className = 'text-[var(--accent)]';
-                document.getElementById('liveIndicator').style.background = 'var(--accent)';
-            };
+      <!-- Product Aside -->
+      <div class="store-aside">
+        <div id="aside-content">
+          <div style="padding:40px 20px;text-align:center;color:var(--text-muted)">
+            <div style="font-size:48px;margin-bottom:14px">👆</div>
+            <p style="font-size:13px">Pilih produk untuk melihat detail dan menambahkan ke keranjang</p>
+          </div>
+        </div>
+      </div>
 
-            state.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.k) {
-                    handleKlineUpdate(data.k);
-                }
-            };
+    </div>
+  </div>
+
+
+  <!-- ══════════ PAYMENT ══════════ -->
+  <div id="page-payment" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">💳 Payment Gateway</div>
+        <div class="page-sub">🔒 Pembayaran aman &amp; terenkripsi</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="navigate('penjualan')">← Kembali ke Toko</button>
+    </div>
+    <div class="content">
+      <div class="pay-layout">
+
+        <!-- Methods -->
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#eff6ff">💳</div>
+            Metode Pembayaran
+          </div>
+          <div id="methods-list"></div>
+        </div>
+
+        <!-- Detail / QR -->
+        <div class="card">
+          <div class="card-title" id="pay-method-title">QRIS</div>
+          <div id="pay-method-body"></div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#f0fdf4">🧾</div>
+            Ringkasan Pembayaran
+          </div>
+          <div id="pay-summary"></div>
+          <div id="pay-success" class="pay-success" style="display:none;margin-top:16px">
+            <div style="font-size:40px;margin-bottom:10px">✅</div>
+            <div style="font-size:16px;font-weight:800;color:var(--green-d)">Pembayaran Berhasil!</div>
+            <div style="font-size:12px;color:#166534;margin-top:5px">Order <strong>#SE202405241030</strong> telah dikonfirmasi</div>
+            <div style="font-size:12px;color:var(--green);font-weight:600;margin-top:4px">Estimasi siap pickup: 30–60 menit</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ EXP DATE ══════════ -->
+  <div id="page-expdate" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">⏰ Exp Date Alert</div>
+        <div class="page-sub">Monitor &amp; kelola produk mendekati kadaluarsa</div>
+      </div>
+      <button class="btn btn-primary btn-sm">+ Set Reminder</button>
+    </div>
+    <div class="content">
+
+      <!-- Summary Cards -->
+      <div class="g-3-c">
+        <div class="card" style="border-left:4px solid var(--red)">
+          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">🔴 Kritis (≤ 7 hari)</div>
+          <div style="font-size:34px;font-weight:800;color:var(--red)" id="exp-kritis">–</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">produk perlu aksi segera</div>
+        </div>
+        <div class="card" style="border-left:4px solid var(--amber)">
+          <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px">🟡 Perhatian (≤ 30 hari)</div>
+          <div style="font-size:34px;font-weight:800;color:var(--amber)" id="exp-warning">–</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">produk segera ditangani</div>
+        </div>
+        <div class="card" style="border-left:4px solid var(--green)">
+          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">🟢 Aman (&gt; 30 hari)</div>
+          <div style="font-size:34px;font-weight:800;color:var(--green)" id="exp-safe">–</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">produk dalam kondisi baik</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon" style="background:#fffbeb">📋</div>
+          Daftar Produk &amp; Rekomendasi AI
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Produk</th><th>Kategori</th><th>Stok</th>
+                <th>Exp Date</th><th>Sisa Hari</th>
+                <th>Rekomendasi AI</th><th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="exp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ MARGIN & P&L ══════════ -->
+  <div id="page-pnl" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">💹 Margin, Profit &amp; Loss</div>
+        <div class="page-sub">Analisis keuangan berbasis AI</div>
+      </div>
+      <span class="badge b-purple">✨ AI Powered</span>
+    </div>
+    <div class="content">
+
+      <!-- Stat Row -->
+      <div class="pnl-stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Penjualan</div>
+          <div class="stat-value" style="color:var(--green);font-size:20px">Rp 45,68 Jt</div>
+          <div class="stat-trend trend-up">↑ +12,5%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Modal</div>
+          <div class="stat-value" style="color:var(--blue);font-size:20px">Rp 28,25 Jt</div>
+          <div class="stat-trend trend-up">↑ +8,3%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Profit</div>
+          <div class="stat-value" style="color:var(--green);font-size:20px">Rp 17,43 Jt</div>
+          <div class="stat-trend trend-up">↑ +18,7%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Margin Rata-rata</div>
+          <div class="stat-value" style="color:var(--purple);font-size:20px">38,13%</div>
+          <div class="stat-trend trend-up">↑ +4,2%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Produk Rugi</div>
+          <div class="stat-value" style="color:var(--red);font-size:20px">12</div>
+          <div class="stat-trend trend-dn">Perlu perhatian</div>
+        </div>
+      </div>
+
+      <!-- Table + Chart -->
+      <div class="g-2-1">
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#f0fdf4">📊</div>
+            Analisis Per Produk
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Produk</th><th>Penjualan</th><th>Modal</th><th>Profit/Loss</th><th>Margin</th><th>Status</th></tr>
+              </thead>
+              <tbody id="pnl-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#f0fdf4">📉</div>
+            Margin per Produk
+          </div>
+          <canvas id="pnl-chart" height="280"></canvas>
+        </div>
+      </div>
+
+      <!-- Calculator + AI -->
+      <div class="g-2">
+
+        <!-- Calculator -->
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#eff6ff">🧮</div>
+            Kalkulator Margin &amp; BEP
+          </div>
+          <div class="calc-grid">
+            <div class="form-group">
+              <label class="form-label">Nama Produk</label>
+              <input class="form-input" id="calc-name" placeholder="Contoh: Susu UHT"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jumlah (Unit)</label>
+              <input class="form-input" id="calc-qty" type="number" placeholder="100"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Harga Jual (Rp)</label>
+              <input class="form-input" id="calc-sell" type="number" placeholder="18500"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Harga Modal (Rp)</label>
+              <input class="form-input" id="calc-cost" type="number" placeholder="13000"/>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg" style="width:100%" onclick="calcMargin()">
+            ⚡ Hitung Sekarang
+          </button>
+          <div class="calc-result-box" id="calc-result" style="display:none">
+            <div>
+              <div class="result-label">Gross Profit</div>
+              <div class="result-value" id="r-profit">–</div>
+            </div>
+            <div>
+              <div class="result-label">Margin %</div>
+              <div class="result-value" id="r-margin">–</div>
+            </div>
+            <div>
+              <div class="result-label">BEP (Unit)</div>
+              <div class="result-value text-blue" id="r-bep">–</div>
+            </div>
+            <div>
+              <div class="result-label">Total Pendapatan</div>
+              <div class="result-value text-green" id="r-rev">–</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Optimization -->
+        <div class="ai-card-purple">
+          <div class="ai-header">
+            <div class="ai-title" style="color:var(--purple)">✨ AI Optimization</div>
+            <button class="btn btn-sm" style="background:var(--purple);color:#fff" onclick="pnlAI()" id="btn-pnl-ai">
+              🤖 Analyze AI
+            </button>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+            AI mendeteksi <strong style="color:var(--red)">12 produk</strong> dengan profit rendah atau merugi.
+          </p>
+          <div id="pnl-ai-body">
+            <p style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:7px">Rekomendasi meminimalisir PNL:</p>
+            <ul class="ai-rec-list">
+              <li>Naikkan harga jual 2–5% untuk 5 produk margin rendah</li>
+              <li>Kurangi diskon pada 3 produk yang sering dipromo</li>
+              <li>Negosiasikan ulang harga supplier untuk 2 produk</li>
+              <li>Pertimbangkan hentikan 2 produk yang konsisten rugi</li>
+            </ul>
+            <div class="potential-box">
+              <div class="potential-label">Potensi peningkatan profit</div>
+              <div class="potential-value">Rp 2.850.000 <span style="font-size:13px;font-weight:500">/&nbsp;bulan</span></div>
+            </div>
+          </div>
+          <button class="btn btn-sm" style="width:100%;margin-top:14px;background:var(--purple);color:#fff"
+            onclick="toast('✓ Rekomendasi AI berhasil diterapkan!')">
+            Terapkan Rekomendasi AI
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ AI INSIGHT ══════════ -->
+  <div id="page-aiinsight" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">✨ AI Insight Center</div>
+        <div class="page-sub">Business intelligence dari Claude AI</div>
+      </div>
+      <button class="btn btn-primary" onclick="generateInsights()" id="btn-insights">
+        ✨ Generate Insights
+      </button>
+    </div>
+    <div class="content">
+
+      <!-- Insights Grid -->
+      <div class="g-3" id="insights-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:56px 0;color:var(--text-muted)">
+          <div style="font-size:56px;margin-bottom:14px">🤖</div>
+          <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">AI Business Advisor siap membantu</p>
+          <p style="font-size:12.5px">Klik <strong>Generate Insights</strong> untuk mendapatkan analisis mendalam bisnis Anda</p>
+        </div>
+      </div>
+
+      <!-- Q&A -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon" style="background:#eff6ff">💬</div>
+          Tanya AI Business Advisor
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <input class="form-input" id="advisor-q"
+            placeholder="Contoh: Bagaimana strategi terbaik untuk meningkatkan margin produk daging sapi?"
+            onkeydown="if(event.key==='Enter')askAdvisor()"/>
+          <button class="btn btn-primary" onclick="askAdvisor()" id="btn-ask" style="flex-shrink:0;white-space:nowrap">
+            Tanya →
+          </button>
+        </div>
+        <div id="advisor-answer" style="display:none" class="ai-response-box">
+          <div class="ai-resp-header">
+            <span class="ai-resp-badge">✨ AI Advisor</span>
+            <span style="font-size:11px;color:var(--text-muted)">SmartStock AI · Claude</span>
+          </div>
+          <p class="ai-body" id="advisor-text"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════ PRODUK ══════════ -->
+  <div id="page-produk" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">📦 Manajemen Produk</div>
+        <div class="page-sub">Kelola seluruh produk toko Anda</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" placeholder="🔍 Cari produk..." style="width:200px"/>
+        <button class="btn btn-primary btn-sm">+ Tambah Produk</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Produk</th><th>Kategori</th><th>Harga Jual</th><th>Modal</th>
+                <th>Margin</th><th>Stok</th><th>Min</th><th>Exp Date</th><th>Status</th><th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="produk-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ STOK ══════════ -->
+  <div id="page-stok" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">🗃️ Manajemen Stok</div>
+        <div class="page-sub">Pantau pergerakan stok secara real-time</div>
+      </div>
+      <button class="btn btn-primary btn-sm">+ Update Stok</button>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Produk</th><th>Kategori</th><th>Stok Saat Ini</th><th>Min Stok</th><th>Exp Date</th><th>Status</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="stok-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ LAPORAN ══════════ -->
+  <div id="page-laporan" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">📊 Laporan Keuangan</div>
+        <div class="page-sub">Analisis performa dan tren bisnis</div>
+      </div>
+      <button class="btn btn-outline btn-sm">📥 Export PDF</button>
+    </div>
+    <div class="content">
+      <div class="g-2">
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#f0fdf4">📈</div>
+            Tren Penjualan Bulanan
+          </div>
+          <canvas id="laporan-line" height="170"></canvas>
+          <div class="chart-legend" style="margin-top:12px">
+            <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Penjualan</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Modal</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <div class="card-title-icon" style="background:#eff6ff">🥧</div>
+            Distribusi Kategori
+          </div>
+          <canvas id="laporan-pie" height="170"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon" style="background:#f0fdf4">📋</div>
+          Ringkasan Bulanan
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Bulan</th><th>Penjualan</th><th>Modal</th><th>Gross Profit</th><th>Margin</th><th>Trend</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Januari 2024</td><td class="val-profit">Rp 32.000.000</td><td>Rp 21.000.000</td><td class="val-profit">Rp 11.000.000</td><td>34,4%</td><td style="color:var(--green);font-weight:700">↑</td></tr>
+              <tr><td>Februari 2024</td><td class="val-profit">Rp 38.000.000</td><td>Rp 25.000.000</td><td class="val-profit">Rp 13.000.000</td><td>34,2%</td><td style="color:var(--green);font-weight:700">↑ +18,8%</td></tr>
+              <tr><td>Maret 2024</td><td class="val-profit">Rp 41.000.000</td><td>Rp 27.000.000</td><td class="val-profit">Rp 14.000.000</td><td>34,1%</td><td style="color:var(--green);font-weight:700">↑ +7,9%</td></tr>
+              <tr><td>April 2024</td><td class="val-low">Rp 36.000.000</td><td>Rp 24.000.000</td><td class="val-profit">Rp 12.000.000</td><td>33,3%</td><td style="color:var(--red);font-weight:700">↓ −12,2%</td></tr>
+              <tr><td>Mei 2024</td><td class="val-profit">Rp 45.680.000</td><td>Rp 28.250.000</td><td class="val-profit">Rp 17.430.000</td><td>38,1%</td><td style="color:var(--green);font-weight:700">↑ +26,9%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ PEMBELIAN ══════════ -->
+  <div id="page-pembelian" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">🛍️ Pembelian / Purchase Order</div>
+        <div class="page-sub">Kelola pesanan ke supplier</div>
+      </div>
+      <button class="btn btn-primary btn-sm">+ Buat PO Baru</button>
+    </div>
+    <div class="content">
+      <div class="card" style="text-align:center;padding:60px 24px">
+        <div style="font-size:56px;margin-bottom:16px">🚧</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Fitur Dalam Pengembangan</div>
+        <p style="font-size:13px;color:var(--text-muted)">Halaman Purchase Order akan tersedia pada versi berikutnya.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SETTINGS ══════════ -->
+  <div id="page-settings" class="page">
+    <div class="topbar">
+      <div>
+        <div class="page-title">⚙️ Pengaturan</div>
+        <div class="page-sub">Konfigurasi sistem dan integrasi</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="g-2">
+        <div class="card">
+          <div class="card-title">🏪 Informasi Toko</div>
+          <div class="form-group"><label class="form-label">Nama Toko</label><input class="form-input" value="SmartStock Utama"/></div>
+          <div class="form-group"><label class="form-label">Alamat</label><input class="form-input" value="Jl. Merdeka No. 123, Jakarta Pusat"/></div>
+          <div class="form-group"><label class="form-label">Jam Operasional</label><input class="form-input" value="08.00 – 21.00"/></div>
+          <button class="btn btn-primary" onclick="toast('✓ Pengaturan toko berhasil disimpan')">Simpan Perubahan</button>
+        </div>
+        <div class="card">
+          <div class="card-title">🔔 Notifikasi</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600">Alert Exp Date</div>
+                <div style="font-size:11.5px;color:var(--text-muted)">Notifikasi 7 &amp; 30 hari sebelum expired</div>
+              </div>
+              <div style="width:40px;height:22px;background:var(--green);border-radius:99px;cursor:pointer"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600">Alert Stok Minimum</div>
+                <div style="font-size:11.5px;color:var(--text-muted)">Notifikasi saat stok di bawah minimum</div>
+              </div>
+              <div style="width:40px;height:22px;background:var(--green);border-radius:99px;cursor:pointer"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600">Laporan Harian</div>
+                <div style="font-size:11.5px;color:var(--text-muted)">Ringkasan otomatis setiap pukul 20.00</div>
+              </div>
+              <div style="width:40px;height:22px;background:var(--border2);border-radius:99px;cursor:pointer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#main -->
+
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast">
+  <span id="toast-msg"></span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
