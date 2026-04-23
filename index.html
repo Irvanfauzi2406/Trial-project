@@ -616,66 +616,63 @@
     <div class="content-area">
       <div class="stats-grid" id="stats-container"></div>
       
-  <div class="grid-3">
-  <div class="chart-container">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      <i class="fas fa-chart-pie" style="color:#10b981"></i>
-      <span style="font-weight:600">Ringkasan Stok</span>
-    </div>
-    <canvas id="doughnut-chart" height="180"></canvas>
-    <div style="margin-top:12px;text-align:center">
-      <span class="badge badge-success"><i class="fas fa-circle" style="font-size:10px"></i> In Stock 892</span>
-      <span class="badge badge-warning" style="margin-left:8px"><i class="fas fa-circle" style="font-size:10px"></i> Low Stock 300</span>
-      <span class="badge badge-danger" style="margin-left:8px"><i class="fas fa-circle" style="font-size:10px"></i> Out of Stock 64</span>
-    </div>
-  </div>
-  
-  <div class="chart-container">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <i class="fas fa-clock" style="color:#f97316"></i>
-        <span style="font-weight:600">Akan Expired</span>
+      <div class="grid-3">
+        <div class="chart-container">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <i class="fas fa-chart-pie" style="color:#10b981"></i>
+            <span style="font-weight:600">Ringkasan Stok</span>
+          </div>
+          <canvas id="doughnut-chart" height="180"></canvas>
+          <div style="margin-top:12px;text-align:center">
+            <span class="badge badge-success"><i class="fas fa-circle" style="font-size:10px"></i> In Stock 892</span>
+            <span class="badge badge-warning" style="margin-left:8px"><i class="fas fa-circle" style="font-size:10px"></i> Low Stock 300</span>
+            <span class="badge badge-danger" style="margin-left:8px"><i class="fas fa-circle" style="font-size:10px"></i> Out of Stock 64</span>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <i class="fas fa-clock" style="color:#f97316"></i>
+              <span style="font-weight:600">Akan Expired</span>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="navigate('expdate')">Lihat semua <i class="fas fa-arrow-right"></i></button>
+          </div>
+          <div id="expired-preview"></div>
+        </div>
+        
+        <div class="ai-card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <i class="fas fa-magic" style="color:#10b981"></i>
+            <span style="font-weight:700">Rekomendasi AI</span>
+          </div>
+          <p style="font-size:12px;margin-bottom:12px">Terdapat <strong>38 produk</strong> akan expired dalam 30 hari (potensi kerugian Rp 2,45 Jt)</p>
+          <ul style="margin-left:20px;font-size:12px;color:#065f46;margin-bottom:16px">
+            <li>Buat promo diskon untuk 15 produk terdekat expired</li>
+            <li>Lakukan bundling untuk 9 produk dairy</li>
+            <li>Alihkan ke cabang lain untuk 5 produk</li>
+            <li>Donasikan 4 produk yang tidak terjual</li>
+          </ul>
+          <button class="btn btn-primary btn-sm" style="width:100%" onclick="showToast('Rekomendasi AI berhasil diterapkan!')"><i class="fas fa-check"></i> Terapkan Semua</button>
+        </div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="navigate('expdate')">Lihat semua <i class="fas fa-arrow-right"></i></button>
-    </div>
-    <div id="expired-preview">
-      <div style="text-align:center;padding:20px;color:#94a3b8">
-        <i class="fas fa-spinner fa-pulse"></i> Memuat...
-      </div>
-    </div>
-  </div>
-  
-  <div class="ai-card">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <i class="fas fa-magic" style="color:#10b981"></i>
-      <span style="font-weight:700">Rekomendasi AI</span>
-    </div>
-    <p style="font-size:12px;margin-bottom:12px">Terdapat <strong>38 produk</strong> akan expired dalam 30 hari (potensi kerugian Rp 2,45 Jt)</p>
-    <ul style="margin-left:20px;font-size:12px;color:#065f46;margin-bottom:16px">
-      <li>Buat promo diskon untuk 15 produk terdekat expired</li>
-      <li>Lakukan bundling untuk 9 produk dairy</li>
-      <li>Alihkan ke cabang lain untuk 5 produk</li>
-      <li>Donasikan 4 produk yang tidak terjual</li>
-    </ul>
-    <button class="btn btn-primary btn-sm" style="width:100%" onclick="showToast('Rekomendasi AI berhasil diterapkan!')"><i class="fas fa-check"></i> Terapkan Semua</button>
-  </div>
-</div>
       
-    <div class="chart-container">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <div style="display:flex;align-items:center;gap:8px">
-      <i class="fas fa-chart-line" style="color:#10b981"></i>
-      <span style="font-weight:600">Tren Penjualan vs Modal (5 Bulan Terakhir)</span>
-    </div>
-    <div style="display:flex;gap:12px;font-size:11px">
-      <span><i class="fas fa-circle" style="color:#10b981;font-size:10px"></i> Penjualan</span>
-      <span><i class="fas fa-circle" style="color:#3b82f6;font-size:10px"></i> Modal</span>
-    </div>
-  </div>
-  <canvas id="sales-chart" height="120"></canvas>
-  <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8">
-    <span>Jan: Rp32jt</span><span>Feb: Rp38jt</span><span>Mar: Rp41jt</span><span>Apr: Rp36jt</span><span>Mei: Rp45,68jt</span>
-     </div>
+      <div class="chart-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <i class="fas fa-chart-line" style="color:#10b981"></i>
+            <span style="font-weight:600">Tren Penjualan vs Modal (5 Bulan Terakhir)</span>
+          </div>
+          <div style="display:flex;gap:12px;font-size:11px">
+            <span><i class="fas fa-circle" style="color:#10b981;font-size:10px"></i> Penjualan</span>
+            <span><i class="fas fa-circle" style="color:#3b82f6;font-size:10px"></i> Modal</span>
+          </div>
+        </div>
+        <canvas id="sales-chart" height="120"></canvas>
+        <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8">
+          <span>Jan: Rp32jt</span><span>Feb: Rp38jt</span><span>Mar: Rp41jt</span><span>Apr: Rp36jt</span><span>Mei: Rp45,68jt</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -703,12 +700,7 @@
           </div>
           <div class="product-grid" id="product-grid"></div>
         </div>
-        <div class="store-aside" id="cart-sidebar-container">
-          <div style="text-align:center;padding:40px 20px;color:#94a3b8">
-            <i class="fas fa-hand-pointer" style="font-size:40px;margin-bottom:12px"></i>
-            <p>Pilih produk di samping<br>untuk melihat detail</p>
-          </div>
-        </div>
+        <div class="store-aside" id="cart-sidebar-container"></div>
       </div>
     </div>
   </div>
@@ -727,12 +719,6 @@
         <div class="chart-container">
           <h3 style="font-size:14px;margin-bottom:16px">Metode Pembayaran</h3>
           <div id="payment-methods-list"></div>
-          <div id="qris-detail" style="margin-top:16px;display:none;text-align:center">
-            <div style="background:#f8fafc;padding:20px;border-radius:12px;margin-top:12px">
-              <i class="fas fa-qrcode" style="font-size:80px;color:#0f172a"></i>
-              <p style="margin-top:12px;font-size:12px">Scan QR Code dengan aplikasi pembayaran</p>
-            </div>
-          </div>
         </div>
         <div class="chart-container">
           <h3 style="font-size:14px;margin-bottom:16px">Ringkasan Pesanan</h3>
@@ -818,7 +804,7 @@
       </div>
     </div>
     <div class="content-area">
-      <div class="stats-grid" style="margin-bottom:20px">
+      <div class="stats-grid" style="margin-bottom:20px" id="pnl-stats">
         <div class="stat-card"><div class="stat-icon" style="background:#d1fae5"><i class="fas fa-chart-line" style="color:#10b981"></i></div><div class="stat-label">Total Penjualan</div><div class="stat-value">Rp 45,68 Jt</div></div>
         <div class="stat-card"><div class="stat-icon" style="background:#dbeafe"><i class="fas fa-coins" style="color:#3b82f6"></i></div><div class="stat-label">Total Modal</div><div class="stat-value">Rp 28,25 Jt</div></div>
         <div class="stat-card"><div class="stat-icon" style="background:#d1fae5"><i class="fas fa-dollar-sign" style="color:#10b981"></i></div><div class="stat-label">Total Profit</div><div class="stat-value">Rp 17,43 Jt</div></div>
@@ -885,12 +871,7 @@
       <button class="btn btn-primary btn-sm" onclick="generateInsights()"><i class="fas fa-magic"></i> Generate Insight</button>
     </div>
     <div class="content-area">
-      <div id="insights-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px">
-        <div style="grid-column:1/-1;text-align:center;padding:60px;background:white;border-radius:16px;border:1px solid #e2e8f0">
-          <i class="fas fa-brain" style="font-size:48px;color:#94a3b8"></i>
-          <p style="margin-top:12px;color:#64748b">Klik Generate Insight untuk analisis bisnis mendalam</p>
-        </div>
-      </div>
+      <div id="insights-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px"></div>
       <div class="chart-container" style="margin-top:20px">
         <h3 style="font-size:14px;margin-bottom:16px"><i class="fas fa-comments"></i> Tanya AI Business Advisor</h3>
         <div style="display:flex;gap:12px">
