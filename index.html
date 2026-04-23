@@ -616,37 +616,50 @@
     <div class="content-area">
       <div class="stats-grid" id="stats-container"></div>
       
-      <div class="grid-3">
-        <div class="chart-container">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-            <i class="fas fa-chart-pie" style="color:#10b981"></i>
-            <span style="font-weight:600">Ringkasan Stok</span>
-          </div>
-          <canvas id="doughnut-chart" height="180"></canvas>
-        </div>
-        
-        <div class="chart-container">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-clock" style="color:#f97316"></i><span style="font-weight:600">Akan Expired</span></div>
-            <button class="btn btn-outline btn-sm" onclick="navigate('expdate')">Lihat semua <i class="fas fa-arrow-right"></i></button>
-          </div>
-          <div id="expired-preview"></div>
-        </div>
-        
-        <div class="ai-card">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-            <i class="fas fa-magic" style="color:#10b981"></i>
-            <span style="font-weight:700">Rekomendasi AI</span>
-          </div>
-          <p style="font-size:12px;margin-bottom:12px">Terdapat <strong>38 produk</strong> akan expired dalam 30 hari</p>
-          <ul style="margin-left:20px;font-size:12px;color:#065f46;margin-bottom:16px">
-            <li>Buat promo diskon untuk 15 produk</li>
-            <li>Lakukan bundling untuk 9 produk dairy</li>
-            <li>Donasikan 4 produk yang tidak terjual</li>
-          </ul>
-          <button class="btn btn-primary btn-sm" style="width:100%" onclick="showToast('Rekomendasi diterapkan')"><i class="fas fa-check"></i> Terapkan Semua</button>
-        </div>
+  <div class="grid-3">
+  <div class="chart-container">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <i class="fas fa-chart-pie" style="color:#10b981"></i>
+      <span style="font-weight:600">Ringkasan Stok</span>
+    </div>
+    <canvas id="doughnut-chart" height="180"></canvas>
+    <div style="margin-top:12px;text-align:center">
+      <span class="badge badge-success"><i class="fas fa-circle" style="font-size:10px"></i> In Stock 892</span>
+      <span class="badge badge-warning" style="margin-left:8px"><i class="fas fa-circle" style="font-size:10px"></i> Low Stock 300</span>
+      <span class="badge badge-danger" style="margin-left:8px"><i class="fas fa-circle" style="font-size:10px"></i> Out of Stock 64</span>
+    </div>
+  </div>
+  
+  <div class="chart-container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="fas fa-clock" style="color:#f97316"></i>
+        <span style="font-weight:600">Akan Expired</span>
       </div>
+      <button class="btn btn-outline btn-sm" onclick="navigate('expdate')">Lihat semua <i class="fas fa-arrow-right"></i></button>
+    </div>
+    <div id="expired-preview">
+      <div style="text-align:center;padding:20px;color:#94a3b8">
+        <i class="fas fa-spinner fa-pulse"></i> Memuat...
+      </div>
+    </div>
+  </div>
+  
+  <div class="ai-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <i class="fas fa-magic" style="color:#10b981"></i>
+      <span style="font-weight:700">Rekomendasi AI</span>
+    </div>
+    <p style="font-size:12px;margin-bottom:12px">Terdapat <strong>38 produk</strong> akan expired dalam 30 hari (potensi kerugian Rp 2,45 Jt)</p>
+    <ul style="margin-left:20px;font-size:12px;color:#065f46;margin-bottom:16px">
+      <li>Buat promo diskon untuk 15 produk terdekat expired</li>
+      <li>Lakukan bundling untuk 9 produk dairy</li>
+      <li>Alihkan ke cabang lain untuk 5 produk</li>
+      <li>Donasikan 4 produk yang tidak terjual</li>
+    </ul>
+    <button class="btn btn-primary btn-sm" style="width:100%" onclick="showToast('Rekomendasi AI berhasil diterapkan!')"><i class="fas fa-check"></i> Terapkan Semua</button>
+  </div>
+</div>
       
       <div class="chart-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
