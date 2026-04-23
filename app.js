@@ -83,8 +83,6 @@ function navigate(pageId) {
   else if (pageId === "pnl") { renderPnLTable(); initMarginChart(); }
   else if (pageId === "laporan") initReportCharts();
 }
-
-// Dashboard
 function initDashboard() {
   const dateEl = document.getElementById("dash-date");
   if (dateEl) {
@@ -93,7 +91,7 @@ function initDashboard() {
     });
   }
   
-  // Stats
+  // Stats container
   const statsContainer = document.getElementById("stats-container");
   if (statsContainer) {
     statsContainer.innerHTML = `
@@ -105,42 +103,83 @@ function initDashboard() {
     `;
   }
   
-  // Expired preview
+  // Expired preview - FIXED
   const expiredPreview = document.getElementById("expired-preview");
   if (expiredPreview) {
     const expiring = productsData.filter(p => p.stock > 0 && daysUntil(p.expiry) <= 30)
       .sort((a, b) => daysUntil(a.expiry) - daysUntil(b.expiry))
-      .slice(0, 3);
-    expiredPreview.innerHTML = expiring.map(p => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #e2e8f0">
-        <div><span style="font-size:20px">${p.emoji}</span> ${p.name}</div>
-        <div><span class="badge ${daysUntil(p.expiry) <= 7 ? 'badge-danger' : 'badge-warning'}">${daysUntil(p.expiry)} hari</span></div>
-      </div>
-    `).join("");
+      .slice(0, 4);
+    
+    if (expiring.length === 0) {
+      expiredPreview.innerHTML = `<div style="text-align:center;padding:20px;color:#10b981"><i class="fas fa-check-circle"></i> Semua produk aman!</div>`;
+    } else {
+      expiredPreview.innerHTML = expiring.map(p => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e2e8f0">
+          <div><span style="font-size:20px;margin-right:8px">${p.emoji}</span> ${p.name}</div>
+          <div><span class="badge ${daysUntil(p.expiry) <= 7 ? 'badge-danger' : 'badge-warning'}">${daysUntil(p.expiry)} hari</span></div>
+        </div>
+      `).join("");
+    }
   }
   
-  // Charts
-  if (typeof Chart !== "undefined") {
-    // Doughnut chart
-    const doughnutCtx = document.getElementById("doughnut-chart");
-    if (doughnutCtx) {
-      if (charts.doughnut) charts.doughnut.destroy();
-      charts.doughnut = new Chart(doughnutCtx, {
-        type: "doughnut",
-        data: { labels: ["In Stock", "Low Stock", "Out of Stock"], datasets: [{ data: [892, 300, 64], backgroundColor: ["#10b981", "#f97316", "#dc2626"], borderWidth: 0 }] },
-        options: { cutout: "65%", plugins: { legend: { position: "bottom" } } }
-      });
+  // Charts - FIXED with timeout to ensure DOM is ready
+  setTimeout(() => {
+    if (typeof Chart !== "undefined") {
+      // Doughnut chart
+      const doughnutCtx = document.getElementById("doughnut-chart");
+      if (doughnutCtx) {
+        if (charts.doughnut) charts.doughnut.destroy();
+        charts.doughnut = new Chart(doughnutCtx, {
+          type: "doughnut",
+          data: { 
+            labels: ["In Stock", "Low Stock", "Out of Stock"], 
+            datasets: [{ 
+              data: [892, 300, 64], 
+              backgroundColor: ["#10b981", "#f97316", "#dc2626"], 
+              borderWidth: 0,
+              hoverOffset: 8
+            }] 
+          },
+          options: { 
+            cutout: "60%", 
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { 
+              legend: { display: false },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} produk (${((ctx.raw/1256)*100).toFixed(1)}%)` } }
+            } 
+          }
+        });
+      }
+      
+      // Sales chart
+      const salesCtx = document.getElementById("sales-chart");
+      if (salesCtx) {
+        if (charts.sales) charts.sales.destroy();
+        charts.sales = new Chart(salesCtx, {
+          type: "bar",
+          data: { 
+            labels: monthlySales.map(s => s.month), 
+            datasets: [
+              { label: "Penjualan", data: monthlySales.map(s => s.sales), backgroundColor: "#10b981", borderRadius: 8, barPercentage: 0.65 },
+              { label: "Modal", data: monthlySales.map(s => s.cost), backgroundColor: "#3b82f6", borderRadius: 8, barPercentage: 0.65 }
+            ] 
+          },
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: true,
+            plugins: { 
+              legend: { position: "top", labels: { boxWidth: 12, font: { size: 11 } } },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatRupiah(ctx.raw)}` } }
+            },
+            scales: { y: { ticks: { callback: (v) => (v/1e6).toFixed(0) + "Jt" } } }
+          }
+        });
+      }
+    } else {
+      console.log("Chart.js not loaded yet");
     }
-    
-    // Sales chart
-    const salesCtx = document.getElementById("sales-chart");
-    if (salesCtx) {
-      if (charts.sales) charts.sales.destroy();
-      charts.sales = new Chart(salesCtx, {
-        type: "bar",
-        data: { labels: monthlySales.map(s => s.month), datasets: [{ label: "Penjualan", data: monthlySales.map(s => s.sales), backgroundColor: "#10b981", borderRadius: 8 }, { label: "Modal", data: monthlySales.map(s => s.cost), backgroundColor: "#3b82f6", borderRadius: 8 }] },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: "top" } } }
-      });
+  }, 100);
     }
   }
 }
@@ -541,27 +580,108 @@ function askAdvisor() {
 
 // Report Charts
 function initReportCharts() {
-  if (typeof Chart === "undefined") return;
-  
-  const lineCtx = document.getElementById("report-line-chart");
-  if (lineCtx) {
-    if (charts.reportLine) charts.reportLine.destroy();
-    charts.reportLine = new Chart(lineCtx, {
-      type: "line",
-      data: { labels: monthlySales.map(s => s.month), datasets: [{ label: "Penjualan", data: monthlySales.map(s => s.sales), borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.1)", fill: true, tension: 0.3 }, { label: "Modal", data: monthlySales.map(s => s.cost), borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.05)", fill: true, tension: 0.3 }] },
-      options: { responsive: true, maintainAspectRatio: true }
-    });
-  }
-  
-  const pieCtx = document.getElementById("report-pie-chart");
-  if (pieCtx) {
-    if (charts.reportPie) charts.reportPie.destroy();
-    charts.reportPie = new Chart(pieCtx, {
-      type: "doughnut",
-      data: { labels: ["Minuman", "Protein", "Dairy", "Bakery"], datasets: [{ data: [35, 28, 20, 17], backgroundColor: ["#10b981", "#3b82f6", "#8b5cf6", "#f97316"], borderWidth: 0 }] },
-      options: { plugins: { legend: { position: "bottom" } }, cutout: "55%" }
-    });
-  }
+    if (typeof Chart === "undefined") return;
+
+    // Line Chart untuk Laporan
+    const lineCtx = document.getElementById("report-line-chart");
+    if (lineCtx) {
+        if (charts.reportLine) charts.reportLine.destroy();
+        charts.reportLine = new Chart(lineCtx, {
+            type: "line",
+            data: {
+                labels: ["Jan", "Feb", "Mar", "Apr", "Mei"],
+                datasets: [
+                    {
+                        label: "Penjualan",
+                        data: [32000000, 38000000, 41000000, 36000000, 45680000],
+                        borderColor: "#10b981",
+                        backgroundColor: "rgba(16, 185, 129, 0.1)",
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: "#10b981",
+                        pointBorderColor: "#fff",
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    },
+                    {
+                        label: "Modal",
+                        data: [21000000, 25000000, 27000000, 24000000, 28250000],
+                        borderColor: "#3b82f6",
+                        backgroundColor: "rgba(59, 130, 246, 0.05)",
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: "#3b82f6",
+                        pointBorderColor: "#fff",
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: "top",
+                        labels: { boxWidth: 12, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                return context.dataset.label + ": Rp " + value.toLocaleString("id-ID");
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: function(value) {
+                                return (value / 1000000).toFixed(0) + " Jt";
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Pie Chart untuk Laporan
+    const pieCtx = document.getElementById("report-pie-chart");
+    if (pieCtx) {
+        if (charts.reportPie) charts.reportPie.destroy();
+        charts.reportPie = new Chart(pieCtx, {
+            type: "doughnut",
+            data: {
+                labels: ["Minuman", "Protein", "Dairy", "Bakery"],
+                datasets: [{
+                    data: [35, 28, 20, 17],
+                    backgroundColor: ["#10b981", "#3b82f6", "#8b5cf6", "#f97316"],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: { boxWidth: 12, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ": " + context.raw + "%";
+                            }
+                        }
+                    }
+                },
+                cutout: "55%"
+            }
+        });
+    }
 }
 
 // Initialize
