@@ -1,6 +1,6 @@
 // SmartStock - Main Application (Complete Version)
 
-// Data
+// Data produk
 const productsData = [
   { id: 1, name: "Susu Ultra Milk 1L", category: "Minuman", stock: 142, minStock: 50, price: 18500, cost: 13000, expiry: "2025-06-15", emoji: "🥛" },
   { id: 2, name: "Yogurt Stroberi", category: "Dairy", stock: 38, minStock: 30, price: 12000, cost: 7500, expiry: "2025-06-20", emoji: "🍓" },
@@ -12,6 +12,7 @@ const productsData = [
   { id: 8, name: "Keju Slice 12pc", category: "Dairy", stock: 12, minStock: 20, price: 35000, cost: 28000, expiry: "2025-06-25", emoji: "🧀" }
 ];
 
+// Data P&L
 const pnlData = [
   { name: "Susu Ultra Milk", sales: 8550000, cost: 5100000, margin: 40.35, status: "Profit" },
   { name: "Roti Tawar", sales: 3600000, cost: 2160000, margin: 40.0, status: "Profit" },
@@ -21,6 +22,7 @@ const pnlData = [
   { name: "Minuman Cola", sales: 2050000, cost: 2200000, margin: -7.32, status: "Loss" }
 ];
 
+// Data penjualan bulanan
 const monthlySales = [
   { month: "Jan", sales: 32000000, cost: 21000000 },
   { month: "Feb", sales: 38000000, cost: 25000000 },
@@ -83,6 +85,8 @@ function navigate(pageId) {
   else if (pageId === "pnl") { renderPnLTable(); initMarginChart(); }
   else if (pageId === "laporan") initReportCharts();
 }
+
+// Dashboard
 function initDashboard() {
   const dateEl = document.getElementById("dash-date");
   if (dateEl) {
@@ -103,7 +107,7 @@ function initDashboard() {
     `;
   }
   
-  // Expired preview - FIXED
+  // Expired preview
   const expiredPreview = document.getElementById("expired-preview");
   if (expiredPreview) {
     const expiring = productsData.filter(p => p.stock > 0 && daysUntil(p.expiry) <= 30)
@@ -122,7 +126,7 @@ function initDashboard() {
     }
   }
   
-  // Charts - FIXED with timeout to ensure DOM is ready
+  // Charts
   setTimeout(() => {
     if (typeof Chart !== "undefined") {
       // Doughnut chart
@@ -146,7 +150,7 @@ function initDashboard() {
             maintainAspectRatio: true,
             plugins: { 
               legend: { display: false },
-              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} produk (${((ctx.raw/1256)*100).toFixed(1)}%)` } }
+              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} produk` } }
             } 
           }
         });
@@ -176,12 +180,8 @@ function initDashboard() {
           }
         });
       }
-    } else {
-      console.log("Chart.js not loaded yet");
     }
   }, 100);
-    }
-  }
 }
 
 // Products
@@ -400,7 +400,9 @@ function renderProductsTable() {
       <td>${formatRupiah(p.price)}</td>
       <td>${formatRupiah(p.cost)}</td>
       <td style="color:${margin >= 20 ? '#10b981' : margin >= 0 ? '#f97316' : '#dc2626'}">${margin}%</td>
-      <td>${p.stock}</td><td>${p.minStock}</td><td>${p.expiry}</td>
+      <td style="font-weight:600;color:${p.stock === 0 ? '#dc2626' : p.stock <= p.minStock ? '#f97316' : '#10b981'}">${p.stock}</td>
+      <td>${p.minStock}</td>
+      <td>${p.expiry}</td>
       <td><button class="btn btn-outline btn-sm" onclick="showToast('Edit ${p.name}')"><i class="fas fa-edit"></i></button>
         <button class="btn btn-danger btn-sm" onclick="showToast('Hapus ${p.name}')"><i class="fas fa-trash"></i></button></td>
     </tr>`;
@@ -433,9 +435,12 @@ function renderExpiredTable() {
   const warning = sorted.filter(p => daysUntil(p.expiry) > 7 && daysUntil(p.expiry) <= 30).length;
   const safe = sorted.filter(p => daysUntil(p.expiry) > 30).length;
   
-  document.getElementById("critical-count").textContent = critical;
-  document.getElementById("warning-count").textContent = warning;
-  document.getElementById("safe-count").textContent = safe;
+  const criticalEl = document.getElementById("critical-count");
+  const warningEl = document.getElementById("warning-count");
+  const safeEl = document.getElementById("safe-count");
+  if (criticalEl) criticalEl.textContent = critical;
+  if (warningEl) warningEl.textContent = warning;
+  if (safeEl) safeEl.textContent = safe;
   
   const tbody = document.getElementById("expired-table");
   if (!tbody) return;
@@ -499,11 +504,17 @@ function calculateMargin() {
   const margin = ((price - cost) / price) * 100;
   const bep = Math.ceil(cost / (price - cost));
   
-  document.getElementById("calc-result").style.display = "grid";
-  document.getElementById("calc-profit").innerHTML = profit >= 0 ? formatRupiah(profit) : formatRupiah(profit);
-  document.getElementById("calc-margin").innerHTML = margin.toFixed(2) + "%";
-  document.getElementById("calc-bep").innerHTML = bep + " unit";
-  document.getElementById("calc-revenue").innerHTML = formatRupiah(price * qty);
+  const resultDiv = document.getElementById("calc-result");
+  if (resultDiv) resultDiv.style.display = "grid";
+  const profitEl = document.getElementById("calc-profit");
+  const marginEl = document.getElementById("calc-margin");
+  const bepEl = document.getElementById("calc-bep");
+  const revenueEl = document.getElementById("calc-revenue");
+  
+  if (profitEl) profitEl.innerHTML = profit >= 0 ? formatRupiah(profit) : formatRupiah(profit);
+  if (marginEl) marginEl.innerHTML = margin.toFixed(2) + "%";
+  if (bepEl) bepEl.innerHTML = bep + " unit";
+  if (revenueEl) revenueEl.innerHTML = formatRupiah(price * qty);
 }
 
 function runAIAnalysis() {
@@ -536,16 +547,14 @@ function generateInsights() {
     { title: "Optimasi Stok Minuman", desc: "Penjualan minuman meningkat 32% di akhir pekan berdasarkan data 4 minggu terakhir.", action: "Tambah stok 20% setiap Kamis-Jumat", priority: "high", category: "Inventory" },
     { title: "Produk Mendekati Expired", desc: "8 produk akan kadaluarsa dalam 14 hari ke depan dengan total nilai Rp 4,2 juta.", action: "Buat bundle promo diskon 30%", priority: "high", category: "Expiry" },
     { title: "Margin Negatif Terdeteksi", desc: "Ayam Fillet dan Minuman Cola memiliki margin negatif selama 2 bulan berturut-turut.", action: "Evaluasi harga jual atau cari supplier baru", priority: "high", category: "Finance" },
-    { title: "Cross-Selling Opportunity", desc: "Pembeli Susu Ultra Milk 78% juga membeli Roti Tawar dalam transaksi yang sama.", action: "Buat paket hemat susu + roti", priority: "medium", category: "Sales" },
-    { title: "Rekomendasi Supplier Baru", desc: "Harga daging sapi Anda 12% di atas rata-rata pasar Jakarta.", action: "Cek harga dari 3 supplier alternatif", priority: "medium", category: "Procurement" },
-    { title: "Jam Sibuk Toko", desc: "Puncak pembelian terjadi pukul 16.00-19.00 (weekday) dan 10.00-12.00 (weekend).", action: "Tambah kasir di jam sibuk", priority: "low", category: "Operations" }
+    { title: "Cross-Selling Opportunity", desc: "Pembeli Susu Ultra Milk 78% juga membeli Roti Tawar dalam transaksi yang sama.", action: "Buat paket hemat susu + roti", priority: "medium", category: "Sales" }
   ];
   
   grid.innerHTML = insights.map(ins => `
-    <div class="insight-card" style="border-top-color: ${ins.priority === 'high' ? '#dc2626' : ins.priority === 'medium' ? '#f97316' : '#10b981'}">
+    <div class="insight-card" style="border-top-color: ${ins.priority === 'high' ? '#dc2626' : '#f97316'}">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px">
         <h3 style="font-size:14px;font-weight:700">${ins.title}</h3>
-        <span class="badge ${ins.priority === 'high' ? 'badge-danger' : ins.priority === 'medium' ? 'badge-warning' : 'badge-success'}">${ins.priority === 'high' ? 'Prioritas' : ins.priority === 'medium' ? 'Sedang' : 'Rendah'}</span>
+        <span class="badge ${ins.priority === 'high' ? 'badge-danger' : 'badge-warning'}">${ins.priority === 'high' ? 'Prioritas' : 'Sedang'}</span>
       </div>
       <p style="font-size:12px;color:#475569;margin-bottom:12px">${ins.desc}</p>
       <div style="background:#f8fafc;border-radius:10px;padding:10px">
@@ -571,117 +580,39 @@ function askAdvisor() {
   textEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> AI sedang menganalisis...';
   
   setTimeout(() => {
-    const answers = {
-      default: "Terima kasih atas pertanyaannya. Untuk meningkatkan performa bisnis, fokus pada 3 hal utama: optimasi stok, monitoring margin, dan promosi produk mendekati expired."
-    };
-    textEl.innerHTML = answers.default;
+    textEl.innerHTML = "Terima kasih atas pertanyaannya. Untuk meningkatkan performa bisnis, fokus pada 3 hal utama: optimasi stok, monitoring margin, dan promosi produk mendekati expired. Kami sarankan untuk melakukan evaluasi harga jual setiap bulan dan membandingkan dengan harga pasar.";
   }, 1500);
 }
 
 // Report Charts
 function initReportCharts() {
-    if (typeof Chart === "undefined") return;
+  if (typeof Chart === "undefined") return;
 
-    // Line Chart untuk Laporan
-    const lineCtx = document.getElementById("report-line-chart");
-    if (lineCtx) {
-        if (charts.reportLine) charts.reportLine.destroy();
-        charts.reportLine = new Chart(lineCtx, {
-            type: "line",
-            data: {
-                labels: ["Jan", "Feb", "Mar", "Apr", "Mei"],
-                datasets: [
-                    {
-                        label: "Penjualan",
-                        data: [32000000, 38000000, 41000000, 36000000, 45680000],
-                        borderColor: "#10b981",
-                        backgroundColor: "rgba(16, 185, 129, 0.1)",
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: "#10b981",
-                        pointBorderColor: "#fff",
-                        pointBorderWidth: 2,
-                        pointRadius: 4
-                    },
-                    {
-                        label: "Modal",
-                        data: [21000000, 25000000, 27000000, 24000000, 28250000],
-                        borderColor: "#3b82f6",
-                        backgroundColor: "rgba(59, 130, 246, 0.05)",
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: "#3b82f6",
-                        pointBorderColor: "#fff",
-                        pointBorderWidth: 2,
-                        pointRadius: 4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: "top",
-                        labels: { boxWidth: 12, font: { size: 11 } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let value = context.raw;
-                                return context.dataset.label + ": Rp " + value.toLocaleString("id-ID");
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: {
-                            callback: function(value) {
-                                return (value / 1000000).toFixed(0) + " Jt";
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
+  const lineCtx = document.getElementById("report-line-chart");
+  if (lineCtx) {
+    if (charts.reportLine) charts.reportLine.destroy();
+    charts.reportLine = new Chart(lineCtx, {
+      type: "line",
+      data: {
+        labels: monthlySales.map(s => s.month),
+        datasets: [
+          { label: "Penjualan", data: monthlySales.map(s => s.sales), borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.1)", fill: true, tension: 0.3, pointBackgroundColor: "#10b981", pointBorderColor: "#fff", pointBorderWidth: 2, pointRadius: 4 },
+          { label: "Modal", data: monthlySales.map(s => s.cost), borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.05)", fill: true, tension: 0.3, pointBackgroundColor: "#3b82f6", pointBorderColor: "#fff", pointBorderWidth: 2, pointRadius: 4 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: "top", labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatRupiah(ctx.raw)}` } } }, scales: { y: { ticks: { callback: (v) => (v/1e6).toFixed(0) + "Jt" } } } }
+    });
+  }
 
-    // Pie Chart untuk Laporan
-    const pieCtx = document.getElementById("report-pie-chart");
-    if (pieCtx) {
-        if (charts.reportPie) charts.reportPie.destroy();
-        charts.reportPie = new Chart(pieCtx, {
-            type: "doughnut",
-            data: {
-                labels: ["Minuman", "Protein", "Dairy", "Bakery"],
-                datasets: [{
-                    data: [35, 28, 20, 17],
-                    backgroundColor: ["#10b981", "#3b82f6", "#8b5cf6", "#f97316"],
-                    borderWidth: 0,
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: "bottom",
-                        labels: { boxWidth: 12, font: { size: 11 } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.label + ": " + context.raw + "%";
-                            }
-                        }
-                    }
-                },
-                cutout: "55%"
-            }
-        });
-    }
+  const pieCtx = document.getElementById("report-pie-chart");
+  if (pieCtx) {
+    if (charts.reportPie) charts.reportPie.destroy();
+    charts.reportPie = new Chart(pieCtx, {
+      type: "doughnut",
+      data: { labels: ["Minuman", "Protein", "Dairy", "Bakery"], datasets: [{ data: [35, 28, 20, 17], backgroundColor: ["#10b981", "#3b82f6", "#8b5cf6", "#f97316"], borderWidth: 0, hoverOffset: 8 }] },
+      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}%` } } }, cutout: "55%" }
+    });
+  }
 }
 
 // Initialize
